@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Финансовый сервис — админка{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'admin_custom/admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="brand-wrap">
+    <div class="brand-left">
+        <div class="brand-badge">₽</div>
+        <div class="brand-text">
+            <h1 id="site-name">
+                <a href="{% url 'admin:index' %}">Финансовый сервис</a>
+            </h1>
+            <div class="brand-subtitle">Административная панель</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

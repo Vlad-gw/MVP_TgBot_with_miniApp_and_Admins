@@ -1,0 +1,174 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="dashboard-page">
+
+    <section class="hero-section">
+        <div class="hero-card">
+            <div class="hero-top">
+                <div>
+                    <div class="hero-label">Панель управления</div>
+                    <h1 class="hero-title">Финансовый сервис</h1>
+                    <p class="hero-text">
+                        Здесь можно быстро перейти к пользователям, транзакциям,
+                        бюджетам, категориям, шаблонам и кодам авторизации.
+                    </p>
+                </div>
+            </div>
+
+            <div class="hero-grid">
+                <a class="hero-link-card" href="{% url 'admin:finance_user_changelist' %}">
+                    <div class="hero-link-icon">👤</div>
+                    <div class="hero-link-title">Пользователи</div>
+                    <div class="hero-link-text">Список пользователей и поиск по Telegram ID</div>
+                </a>
+
+                <a class="hero-link-card" href="{% url 'admin:finance_transaction_changelist' %}">
+                    <div class="hero-link-icon">💸</div>
+                    <div class="hero-link-title">Транзакции</div>
+                    <div class="hero-link-text">Все доходы и расходы с фильтрами и поиском</div>
+                </a>
+
+                <a class="hero-link-card" href="{% url 'admin:finance_budget_changelist' %}">
+                    <div class="hero-link-icon">📊</div>
+                    <div class="hero-link-title">Бюджеты</div>
+                    <div class="hero-link-text">Лимиты по категориям и месяцам</div>
+                </a>
+
+                <a class="hero-link-card" href="{% url 'admin:finance_category_changelist' %}">
+                    <div class="hero-link-icon">📂</div>
+                    <div class="hero-link-title">Категории</div>
+                    <div class="hero-link-text">Категории доходов и расходов</div>
+                </a>
+
+                <a class="hero-link-card" href="{% url 'admin:finance_transactiontemplate_changelist' %}">
+                    <div class="hero-link-icon">🧩</div>
+                    <div class="hero-link-title">Шаблоны</div>
+                    <div class="hero-link-text">Шаблоны быстрых операций</div>
+                </a>
+
+                <a class="hero-link-card" href="{% url 'admin:finance_authcode_changelist' %}">
+                    <div class="hero-link-icon">🔐</div>
+                    <div class="hero-link-title">Коды авторизации</div>
+                    <div class="hero-link-text">Проверка одноразовых кодов входа</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-main-grid">
+        <div class="dashboard-column">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-label">Разделы</div>
+                        <h2 class="panel-title">Быстрый доступ</h2>
+                    </div>
+                </div>
+
+                <div class="quick-list">
+                    <a class="quick-item" href="{% url 'admin:finance_user_changelist' %}">
+                        <span class="quick-item-left">
+                            <span class="quick-item-icon">👤</span>
+                            <span class="quick-item-text">Открыть пользователей</span>
+                        </span>
+                        <span class="quick-item-arrow">→</span>
+                    </a>
+
+                    <a class="quick-item" href="{% url 'admin:finance_transaction_changelist' %}">
+                        <span class="quick-item-left">
+                            <span class="quick-item-icon">💸</span>
+                            <span class="quick-item-text">Открыть транзакции</span>
+                        </span>
+                        <span class="quick-item-arrow">→</span>
+                    </a>
+
+                    <a class="quick-item" href="{% url 'admin:finance_budget_changelist' %}">
+                        <span class="quick-item-left">
+                            <span class="quick-item-icon">📊</span>
+                            <span class="quick-item-text">Открыть бюджеты</span>
+                        </span>
+                        <span class="quick-item-arrow">→</span>
+                    </a>
+
+                    <a class="quick-item" href="{% url 'admin:finance_category_changelist' %}">
+                        <span class="quick-item-left">
+                            <span class="quick-item-icon">📂</span>
+                            <span class="quick-item-text">Открыть категории</span>
+                        </span>
+                        <span class="quick-item-arrow">→</span>
+                    </a>
+
+                    <a class="quick-item" href="{% url 'admin:finance_transactiontemplate_changelist' %}">
+                        <span class="quick-item-left">
+                            <span class="quick-item-icon">🧩</span>
+                            <span class="quick-item-text">Открыть шаблоны</span>
+                        </span>
+                        <span class="quick-item-arrow">→</span>
+                    </a>
+
+                    <a class="quick-item" href="{% url 'admin:finance_authcode_changelist' %}">
+                        <span class="quick-item-left">
+                            <span class="quick-item-icon">🔐</span>
+                            <span class="quick-item-text">Открыть коды авторизации</span>
+                        </span>
+                        <span class="quick-item-arrow">→</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-column">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-label">Активность</div>
+                        <h2 class="panel-title">Последние действия</h2>
+                    </div>
+                    <div class="panel-badge">10</div>
+                </div>
+
+                {% if log_entries %}
+                    <div class="activity-list">
+                        {% for entry in log_entries|slice:":10" %}
+                            <div class="activity-item">
+                                <div class="activity-icon
+                                    {% if entry.is_addition %}activity-add{% endif %}
+                                    {% if entry.is_change %}activity-change{% endif %}
+                                    {% if entry.is_deletion %}activity-delete{% endif %}
+                                ">
+                                    {% if entry.is_addition %}+{% elif entry.is_change %}✎{% elif entry.is_deletion %}×{% else %}•{% endif %}
+                                </div>
+
+                                <div class="activity-content">
+                                    <div class="activity-title">
+                                        {% if entry.get_admin_url %}
+                                            <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                                        {% else %}
+                                            {{ entry.object_repr }}
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="activity-meta">
+                                        {% if entry.content_type %}
+                                            {{ entry.content_type|capfirst }}
+                                        {% else %}
+                                            Объект
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        Пока нет действий для отображения.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

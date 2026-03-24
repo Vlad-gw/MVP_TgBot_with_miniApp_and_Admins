@@ -1,0 +1,2848 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Финансовый помощник</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --line: #243041;
+      --input: #0b1220;
+      --primary: #2563eb;
+      --primary-2: #38bdf8;
+      --success: #16a34a;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --chip: #1e293b;
+      --shadow: 0 18px 40px rgba(0,0,0,.24);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,.15), transparent 22%),
+        radial-gradient(circle at top left, rgba(56,189,248,.10), transparent 18%),
+        var(--bg);
+    }
+
+    .app {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 16px 16px calc(98px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .card {
+      background: rgba(17,24,39,.92);
+      border: 1px solid rgba(51,65,85,.9);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .card + .card { margin-top: 14px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .section-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .grid { display: grid; gap: 12px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .metric {
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      min-height: 96px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 23px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.03em;
+      word-break: break-word;
+    }
+
+    .metric-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .metric-income { color: #4ade80; }
+    .metric-expense { color: #f87171; }
+    .metric-primary { color: #7dd3fc; }
+    .metric-warning { color: #fdba74; }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, opacity .15s ease, background .15s ease;
+    }
+    .btn:active { transform: scale(.99); }
+    .btn:disabled { opacity: .6; cursor: default; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #182235; color: var(--text); border: 1px solid #334155; }
+    .btn-secondary:hover { background: #202d42; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-sm { padding: 9px 12px; font-size: 13px; border-radius: 12px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .input, .select, .textarea {
+      width: 100%;
+      background: var(--input);
+      border: 1px solid #334155;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+    }
+    .input:focus, .select:focus, .textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+    .textarea { min-height: 96px; resize: vertical; }
+
+    .filters {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+    .full { grid-column: 1 / -1; }
+
+    .insight-banner {
+      background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(56,189,248,.10));
+      border: 1px solid rgba(59,130,246,.35);
+      border-radius: 18px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+    .insight-title { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+    .insight-text { color: #dbeafe; font-size: 13px; line-height: 1.45; }
+
+    .list { display: flex; flex-direction: column; gap: 10px; }
+    .tx-item, .budget-item, .forecast-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,.02);
+    }
+
+    .tx-head, .budget-head, .forecast-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .tx-title, .budget-title, .forecast-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .tx-subtitle, .budget-subtitle, .forecast-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .tx-amount, .budget-amount, .forecast-amount {
+      font-size: 18px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .tx-amount.income { color: #4ade80; }
+    .tx-amount.expense { color: #f87171; }
+    .tx-meta, .budget-meta, .forecast-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .tx-actions, .budget-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .chip {
+      background: var(--chip);
+      border: 1px solid #334155;
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+    .chip-ok { background: rgba(22,163,74,.14); border-color: rgba(22,163,74,.28); color: #86efac; }
+    .chip-warning { background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.28); color: #fdba74; }
+    .chip-danger { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.28); color: #fca5a5; }
+    .chip-primary { background: rgba(37,99,235,.14); border-color: rgba(37,99,235,.28); color: #93c5fd; }
+
+    .bar-wrap { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; flex-direction: column; gap: 6px; }
+    .bar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .bar {
+      width: 100%;
+      height: 12px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+    }
+    .bar-fill-warning { background: linear-gradient(90deg, #d97706, #f59e0b); }
+    .bar-fill-danger { background: linear-gradient(90deg, #dc2626, #ef4444); }
+    .bar-fill-success { background: linear-gradient(90deg, #15803d, #22c55e); }
+
+    .chart-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,.02);
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed #334155;
+      border-radius: 16px;
+      padding: 24px 12px;
+    }
+
+    .profile-grid { display: grid; gap: 10px; }
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding: 12px 0;
+    }
+    .profile-row:last-child { border-bottom: 0; }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+      background: rgba(15,23,42,.96);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(51,65,85,.9);
+      z-index: 50;
+    }
+    .bottom-nav-inner {
+      max-width: 920px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    .nav-btn {
+      border: 1px solid #334155;
+      background: #111827;
+      color: var(--text);
+      border-radius: 16px;
+      padding: 12px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .nav-btn.active { background: var(--primary); border-color: var(--primary); }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      background: rgba(2,6,23,.78);
+      z-index: 100;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: 100%;
+      max-width: 920px;
+      max-height: 92vh;
+      overflow: auto;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 18px 16px 22px;
+      box-shadow: var(--shadow);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .modal-title { font-size: 18px; font-weight: 800; }
+    .close-btn {
+      width: 38px; height: 38px;
+      border: 0;
+      border-radius: 12px;
+      background: #1f2937;
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(15,23,42,.96);
+      color: var(--text);
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: all .22s ease;
+      z-index: 200;
+      max-width: calc(100vw - 24px);
+      font-size: 13px;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .loader-line {
+      height: 10px;
+      width: 120px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(37,99,235,.20), rgba(56,189,248,.55), rgba(37,99,235,.20));
+      background-size: 200% 100%;
+      animation: shimmer 1.25s infinite linear;
+    }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+
+    .segmented {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .seg-btn {
+      border: 1px solid #334155;
+      background: #111827;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .seg-btn.active {
+      background: rgba(37,99,235,.18);
+      border-color: rgba(59,130,246,.45);
+      color: #bfdbfe;
+    }
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 12px;
+    }
+    .mini-stat {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.02);
+    }
+    .mini-stat-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .mini-stat-value { font-size: 20px; font-weight: 800; }
+    .ring-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      position: relative;
+    }
+    .ring-center {
+      position: absolute;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .ring-center small { color: var(--muted); font-size: 12px; }
+    .manager-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .manager-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,.02);
+    }
+    .manager-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .manager-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+    .manager-subtitle { font-size: 12px; color: var(--muted); }
+
+
+    .chart-shell {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,.02);
+    }
+    .chart-shell + .chart-shell { margin-top: 12px; }
+    .svg-chart {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .svg-grid-line { stroke: rgba(148,163,184,.16); stroke-width: 1; }
+    .svg-axis-text { fill: #94a3b8; font-size: 11px; }
+    .svg-label-strong { fill: #e2e8f0; font-size: 12px; font-weight: 700; }
+    .svg-line-income { stroke: #22c55e; }
+    .svg-line-expense { stroke: #ef4444; }
+    .svg-line-balance { stroke: #60a5fa; }
+    .svg-line-cumulative { stroke: #f59e0b; }
+    .svg-fill-cumulative { fill: rgba(245,158,11,.14); }
+    .svg-line, .svg-area {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .dot-income { fill: #22c55e; }
+    .dot-expense { fill: #ef4444; }
+    .dot-balance { fill: #60a5fa; }
+    .dot-cumulative { fill: #f59e0b; }
+    .analytics-grid-2 {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .donut-layout {
+      display: grid;
+      grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+    .donut-svg-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 280px;
+    }
+    .donut-center {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 4px;
+      pointer-events: none;
+    }
+    .donut-center strong { font-size: 30px; line-height: 1; }
+    .donut-center small { color: var(--muted); font-size: 12px; }
+    .legend-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .legend-item {
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+    }
+    .legend-item-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .legend-item-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 700;
+    }
+    .legend-item-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .legend-item-value {
+      white-space: nowrap;
+      font-weight: 800;
+    }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .compare-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.02);
+    }
+    .compare-item-title { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .compare-bars { display: flex; flex-direction: column; gap: 8px; }
+    .compare-bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+    .compare-bar-track { height: 10px; border-radius: 999px; background: #1e293b; overflow: hidden; }
+    .compare-bar-fill { height: 100%; border-radius: 999px; }
+    .compare-bar-fill.current { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .compare-bar-fill.previous { background: linear-gradient(90deg, #475569, #94a3b8); }
+    .chart-caption {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 760px) {
+      .split-grid { grid-template-columns: 1fr; }
+      .analytics-grid-2, .compare-grid, .donut-layout { grid-template-columns: 1fr; }
+      .donut-svg-wrap { min-height: 240px; }
+      .donut-center strong { font-size: 24px; }
+
+      .grid-4, .grid-3, .grid-2, .filters { grid-template-columns: 1fr; }
+      .app { padding-left: 12px; padding-right: 12px; }
+      .bottom-nav-inner { gap: 6px; }
+      .nav-btn { padding: 10px 6px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <div class="title">Финансовый помощник</div>
+        <div class="subtitle" id="welcomeText">Загрузка Mini App...</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="refreshBtn">Обновить</button>
+    </div>
+
+    <div id="dashboardScreen" class="screen active">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Сводка</div>
+            <div class="section-subtitle">Быстрый взгляд на доходы, расходы и текущее состояние.</div>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="metric">
+            <div class="metric-label">Доходы</div>
+            <div class="metric-value metric-income" id="incomeValue">—</div>
+            <div class="metric-note">За выбранный период</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Расходы</div>
+            <div class="metric-value metric-expense" id="expenseValue">—</div>
+            <div class="metric-note">За выбранный период</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Баланс</div>
+            <div class="metric-value" id="balanceValue">—</div>
+            <div class="metric-note" id="balanceHint">Разница между доходами и расходами</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="openAddIncomeBtn">+ Добавить доход</button>
+          <button class="btn btn-secondary" id="openAddExpenseBtn">− Добавить расход</button>
+        </div>
+
+        <div class="status" id="summaryStatus"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Умные карточки месяца</div>
+            <div class="section-subtitle">Серверная аналитика и инсайты для текущего месяца.</div>
+          </div>
+        </div>
+        <div class="grid grid-4">
+          <div class="metric">
+            <div class="metric-label">Средний расход в день</div>
+            <div class="metric-value metric-expense" id="avgDailyExpense">—</div>
+            <div class="metric-note" id="avgDailyExpenseNote">По фактическим данным месяца</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Безопасный лимит в день</div>
+            <div class="metric-value metric-primary" id="safeDailyLimit">—</div>
+            <div class="metric-note" id="safeDailyLimitNote">Чтобы уложиться в бюджеты</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Дней осталось</div>
+            <div class="metric-value metric-warning" id="daysRemaining">—</div>
+            <div class="metric-note" id="daysRemainingNote">До конца месяца</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Статус бюджета</div>
+            <div class="metric-value" id="budgetStatusValue">—</div>
+            <div class="metric-note" id="budgetStatusNote">Состояние лимитов по месяцу</div>
+          </div>
+        </div>
+
+        <div class="insight-banner">
+          <div class="insight-title">Вывод по месяцу</div>
+          <div class="insight-text" id="insightText">Собираем данные...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Прогноз расходов</div>
+            <div class="section-subtitle">Оценка следующего месяца на основе предыдущих полных месяцев.</div>
+          </div>
+        </div>
+
+        <div class="grid grid-4">
+          <div class="metric">
+            <div class="metric-label">Ожидаемо</div>
+            <div class="metric-value metric-expense" id="forecastExpected">—</div>
+            <div class="metric-note" id="forecastMonthLabel">Следующий месяц</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Минимум</div>
+            <div class="metric-value" id="forecastLow">—</div>
+            <div class="metric-note">Нижняя граница диапазона</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Максимум</div>
+            <div class="metric-value" id="forecastHigh">—</div>
+            <div class="metric-note">Верхняя граница диапазона</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Тренд</div>
+            <div class="metric-value" id="forecastTrend">—</div>
+            <div class="metric-note" id="forecastTrendNote">Сравнение последних месяцев</div>
+          </div>
+        </div>
+
+        <div class="forecast-item" style="margin-top: 12px;">
+          <div class="forecast-head">
+            <div>
+              <div class="forecast-title">Главный риск</div>
+              <div class="forecast-subtitle" id="forecastTopCategoryText">Загрузка...</div>
+            </div>
+            <div class="forecast-amount" id="forecastTopCategoryAmount">—</div>
+          </div>
+          <div class="forecast-meta">
+            <span class="chip chip-primary" id="forecastTopCategoryChip">Нет данных</span>
+            <span class="chip" id="forecastHistoryChip">История: —</span>
+          </div>
+        </div>
+
+        <div class="status" id="forecastStatus"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Бюджеты за месяц</div>
+            <div class="section-subtitle">Общая сводка по категориям бюджета.</div>
+          </div>
+        </div>
+        <div class="grid grid-4">
+          <div class="metric">
+            <div class="metric-label">Лимит</div>
+            <div class="metric-value" id="dashboardBudgetLimit">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Потрачено</div>
+            <div class="metric-value metric-expense" id="dashboardBudgetSpent">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Осталось</div>
+            <div class="metric-value" id="dashboardBudgetRemaining">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Проблемные бюджеты</div>
+            <div class="metric-value" id="dashboardBudgetAlerts">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Последние транзакции</div>
+            <div class="section-subtitle">Последние записи из журнала операций.</div>
+          </div>
+        </div>
+        <div id="recentTransactions" class="list"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Топ категорий расходов</div>
+            <div class="section-subtitle">Самые затратные категории за текущий фильтр.</div>
+          </div>
+        </div>
+        <div id="analyticsBars" class="bar-wrap"></div>
+      </div>
+    </div>
+
+    <div id="transactionsScreen" class="screen">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Транзакции</div>
+            <div class="section-subtitle">Фильтры, поиск и управление всеми операциями.</div>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="field">
+            <label for="filterType">Тип</label>
+            <select id="filterType" class="select">
+              <option value="">Все</option>
+              <option value="income">Доходы</option>
+              <option value="expense">Расходы</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filterCategory">Категория</label>
+            <select id="filterCategory" class="select"><option value="">Все категории</option></select>
+          </div>
+          <div class="field">
+            <label for="filterFrom">Дата от</label>
+            <input id="filterFrom" class="input" type="date" />
+          </div>
+          <div class="field">
+            <label for="filterTo">Дата до</label>
+            <input id="filterTo" class="input" type="date" />
+          </div>
+          <div class="field full">
+            <label for="filterSearch">Поиск</label>
+            <input id="filterSearch" class="input" type="text" placeholder="Например: кофе, такси, зарплата" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="applyFiltersBtn">Применить</button>
+          <button class="btn btn-secondary" id="resetFiltersBtn">Сбросить</button>
+          <button class="btn btn-success" id="transactionsAddBtn">Новая транзакция</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Быстрый ввод</div>
+            <div class="section-subtitle">Ввод одной строкой: <b>-500 кофе</b>, <b>-1200 такси вчера 14:30</b>, <b>+30000 зарплата</b>.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="quickAddInput">Строка операции</label>
+          <input id="quickAddInput" class="input" type="text" placeholder="-500 кофе сегодня 09:15" />
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="quickAddPreviewBtn">Разобрать</button>
+          <button class="btn btn-success" id="quickAddCreateBtn">Сохранить быстро</button>
+          <button class="btn btn-secondary" id="quickAddClearBtn">Очистить</button>
+        </div>
+
+        <div class="status" id="quickAddStatus"></div>
+
+        <div id="quickAddPreviewWrap" style="display:none; margin-top:12px;">
+          <div class="tx-item">
+            <div class="tx-head">
+              <div>
+                <div class="tx-title" id="quickAddPreviewTitle">Предпросмотр</div>
+                <div class="tx-subtitle" id="quickAddPreviewSubtitle">—</div>
+              </div>
+              <div class="tx-amount" id="quickAddPreviewAmount">—</div>
+            </div>
+            <div class="tx-meta">
+              <span class="chip" id="quickAddPreviewType">—</span>
+              <span class="chip" id="quickAddPreviewDate">—</span>
+              <span class="chip chip-primary" id="quickAddPreviewSuggested">Категория: —</span>
+            </div>
+            <div id="quickAddCandidates" class="tx-actions" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="transactionsList" class="list"></div>
+      </div>
+    </div>
+
+    <div id="analyticsScreen" class="screen">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Аналитика</div>
+            <div class="section-subtitle">Серверная аналитика по периодам, категориям и месяцам.</div>
+          </div>
+        </div>
+        <div class="segmented" id="analyticsPeriodButtons">
+          <button class="seg-btn active" data-period="month">Месяц</button>
+          <button class="seg-btn" data-period="7d">7 дней</button>
+          <button class="seg-btn" data-period="30d">30 дней</button>
+          <button class="seg-btn" data-period="90d">90 дней</button>
+          <button class="seg-btn" data-period="year">Год</button>
+        </div>
+        <div class="status" id="analyticsText">Загружаем данные...</div>
+      </div>
+
+      <div class="card">
+        <div class="grid grid-4">
+          <div class="mini-stat"><div class="mini-stat-label">Средний чек расхода</div><div class="mini-stat-value" id="analyticsAvgCheck">—</div></div>
+          <div class="mini-stat"><div class="mini-stat-label">Топ-категория</div><div class="mini-stat-value" id="analyticsTopCategory">—</div></div>
+          <div class="mini-stat"><div class="mini-stat-label">Пиковый день</div><div class="mini-stat-value" id="analyticsTopDay">—</div></div>
+          <div class="mini-stat"><div class="mini-stat-label">Изменение периода</div><div class="mini-stat-value" id="analyticsPeriodDelta">—</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Расходы по категориям</div>
+            <div class="section-subtitle">Доли категорий за текущий период.</div>
+          </div>
+        </div>
+        <div id="fullAnalyticsBars" class="bar-wrap"></div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Ключевые графики периода</div>
+            <div class="section-subtitle">Нормальная диаграмма по категориям, сравнение периодов и дневной тренд расходов.</div>
+          </div>
+        </div>
+        <div class="analytics-grid-2">
+          <div class="chart-shell">
+            <div class="section-title" style="font-size:16px; margin-bottom:6px;">Структура расходов</div>
+            <div class="section-subtitle" style="margin-bottom:12px;">Кольцевая диаграмма по основным категориям.</div>
+            <div id="categoryDonutWrap"></div>
+          </div>
+          <div class="chart-shell">
+            <div class="section-title" style="font-size:16px; margin-bottom:6px;">Сравнение с прошлым периодом</div>
+            <div class="section-subtitle" style="margin-bottom:12px;">Доходы, расходы и баланс: сейчас против предыдущего аналогичного периода.</div>
+            <div id="periodCompareWrap"></div>
+          </div>
+        </div>
+        <div class="analytics-grid-2" style="margin-top:12px;">
+          <div class="chart-shell">
+            <div class="section-title" style="font-size:16px; margin-bottom:6px;">Расходы по дням</div>
+            <div class="section-subtitle" style="margin-bottom:12px;">Где были пики трат внутри выбранного периода.</div>
+            <div id="dailyChartWrap"></div>
+          </div>
+          <div class="chart-shell">
+            <div class="section-title" style="font-size:16px; margin-bottom:6px;">Накопление расходов</div>
+            <div class="section-subtitle" style="margin-bottom:12px;">Как росла сумма расходов по ходу периода.</div>
+            <div id="cumulativeChartWrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Что изменилось по категориям</div>
+            <div class="section-subtitle">Сравнение с предыдущим аналогичным периодом.</div>
+          </div>
+        </div>
+        <div id="categoryDeltaWrap" class="bar-wrap"></div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Месячный тренд</div>
+            <div class="section-subtitle">Доходы, расходы и баланс по месяцам.</div>
+          </div>
+        </div>
+        <div id="monthlyChartWrap"></div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:#22c55e"></span>Доходы</span>
+          <span><span class="legend-dot" style="background:#ef4444"></span>Расходы</span>
+          <span><span class="legend-dot" style="background:#60a5fa"></span>Баланс</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="budgetsScreen" class="screen">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Бюджеты</div>
+            <div class="section-subtitle">Лимиты по категориям и контроль превышений.</div>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="field">
+            <label for="budgetMonthFilter">Месяц</label>
+            <input id="budgetMonthFilter" class="input" type="month" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" id="applyBudgetMonthBtn">Показать</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-success" id="openAddBudgetBtn">Добавить бюджет</button>
+        </div>
+
+        <div class="status" id="budgetSummaryStatus"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Общая сводка</div>
+        <div class="grid grid-4">
+          <div class="metric"><div class="metric-label">Всего лимит</div><div class="metric-value" id="budgetTotalLimit">—</div></div>
+          <div class="metric"><div class="metric-label">Всего потрачено</div><div class="metric-value metric-expense" id="budgetTotalSpent">—</div></div>
+          <div class="metric"><div class="metric-label">Всего осталось</div><div class="metric-value" id="budgetTotalRemaining">—</div></div>
+          <div class="metric"><div class="metric-label">Бюджетов</div><div class="metric-value" id="budgetCountValue">—</div></div>
+        </div>
+        <div class="grid grid-3" style="margin-top: 12px;">
+          <div class="metric"><div class="metric-label">Норма</div><div class="metric-value" id="budgetNormalCount">—</div></div>
+          <div class="metric"><div class="metric-label">Почти лимит</div><div class="metric-value metric-warning" id="budgetWarningCount">—</div></div>
+          <div class="metric"><div class="metric-label">Превышено</div><div class="metric-value metric-expense" id="budgetExceededCount">—</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Список бюджетов</div>
+        <div id="budgetsList" class="list"></div>
+      </div>
+    </div>
+
+    <div id="profileScreen" class="screen">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Профиль</div>
+            <div class="section-subtitle">Данные пользователя и системная информация.</div>
+          </div>
+        </div>
+        <div class="profile-grid" id="profileInfo"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Категории</div>
+            <div class="section-subtitle">Полное управление категориями доходов и расходов.</div>
+          </div>
+          <button class="btn btn-success btn-sm" id="openAddCategoryBtn">Добавить</button>
+        </div>
+        <div class="segmented" id="categoryTypeFilters">
+          <button class="seg-btn active" data-category-filter="all">Все</button>
+          <button class="seg-btn" data-category-filter="expense">Расходы</button>
+          <button class="seg-btn" data-category-filter="income">Доходы</button>
+        </div>
+        <div id="categoriesManager" class="manager-list" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Шаблоны операций</div>
+            <div class="section-subtitle">Сохраняй частые траты и доходы в один тап.</div>
+          </div>
+          <button class="btn btn-success btn-sm" id="openAddTemplateBtn">Новый шаблон</button>
+        </div>
+        <div class="segmented" id="templateTypeFilters">
+          <button class="seg-btn active" data-template-filter="all">Все</button>
+          <button class="seg-btn" data-template-filter="expense">Расходы</button>
+          <button class="seg-btn" data-template-filter="income">Доходы</button>
+        </div>
+        <div id="templatesManager" class="manager-list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="nav-btn active" data-screen="dashboardScreen">Главная</button>
+      <button class="nav-btn" data-screen="transactionsScreen">Транзакции</button>
+      <button class="nav-btn" data-screen="analyticsScreen">Аналитика</button>
+      <button class="nav-btn" data-screen="budgetsScreen">Бюджеты</button>
+      <button class="nav-btn" data-screen="profileScreen">Профиль</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="transactionModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="transactionModalTitle">Новая транзакция</div>
+        <button class="close-btn" id="closeTransactionModalBtn">×</button>
+      </div>
+      <form id="transactionForm">
+        <input type="hidden" id="transactionId" />
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="transactionType">Тип</label>
+            <select id="transactionType" class="select" required>
+              <option value="income">Доход</option>
+              <option value="expense">Расход</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="transactionAmount">Сумма</label>
+            <input id="transactionAmount" class="input" type="number" inputmode="decimal" step="0.01" min="0.01" required />
+          </div>
+          <div class="field">
+            <label for="transactionCategory">Категория</label>
+            <select id="transactionCategory" class="select"><option value="">Без категории</option></select>
+          </div>
+          <div class="field">
+            <label for="transactionDate">Дата и время</label>
+            <input id="transactionDate" class="input" type="datetime-local" required />
+          </div>
+          <div class="field full">
+            <label for="transactionNote">Комментарий</label>
+            <textarea id="transactionNote" class="textarea" placeholder="Например: кофе, такси, зарплата"></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="saveTransactionBtn">Сохранить</button>
+          <button type="button" class="btn btn-secondary" id="cancelTransactionBtn">Отмена</button>
+        </div>
+        <div class="status" id="transactionFormStatus"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="budgetModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="budgetModalTitle">Новый бюджет</div>
+        <button class="close-btn" id="closeBudgetModalBtn">×</button>
+      </div>
+      <form id="budgetForm">
+        <input type="hidden" id="budgetId" />
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="budgetCategory">Категория расходов</label>
+            <select id="budgetCategory" class="select" required><option value="">Выбери категорию</option></select>
+          </div>
+          <div class="field">
+            <label for="budgetMonth">Месяц</label>
+            <input id="budgetMonth" class="input" type="month" required />
+          </div>
+          <div class="field full">
+            <label for="budgetLimitAmount">Лимит</label>
+            <input id="budgetLimitAmount" class="input" type="number" inputmode="decimal" step="0.01" min="0.01" required />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="saveBudgetBtn">Сохранить</button>
+          <button type="button" class="btn btn-secondary" id="cancelBudgetBtn">Отмена</button>
+        </div>
+        <div class="status" id="budgetFormStatus"></div>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="modal-backdrop" id="categoryModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="categoryModalTitle">Новая категория</div>
+        <button class="close-btn" id="closeCategoryModalBtn">×</button>
+      </div>
+      <form id="categoryForm">
+        <input type="hidden" id="categoryId" />
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="categoryType">Тип</label>
+            <select id="categoryType" class="select" required>
+              <option value="expense">Расход</option>
+              <option value="income">Доход</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="categoryName">Название</label>
+            <input id="categoryName" class="input" type="text" maxlength="64" placeholder="Например: Кофе, Зарплата" required />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+          <button type="button" class="btn btn-secondary" id="cancelCategoryBtn">Отмена</button>
+        </div>
+        <div class="status" id="categoryFormStatus"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="templateModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="templateModalTitle">Новый шаблон</div>
+        <button class="close-btn" id="closeTemplateModalBtn">×</button>
+      </div>
+      <form id="templateForm">
+        <input type="hidden" id="templateId" />
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="templateType">Тип</label>
+            <select id="templateType" class="select" required>
+              <option value="expense">Расход</option>
+              <option value="income">Доход</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="templateName">Название</label>
+            <input id="templateName" class="input" type="text" maxlength="64" placeholder="Например: Кофе у офиса" required />
+          </div>
+          <div class="field">
+            <label for="templateAmount">Сумма</label>
+            <input id="templateAmount" class="input" type="number" inputmode="decimal" step="0.01" min="0.01" />
+          </div>
+          <div class="field">
+            <label for="templateCategory">Категория</label>
+            <select id="templateCategory" class="select"><option value="">Без категории</option></select>
+          </div>
+          <div class="field full">
+            <label for="templateNote">Комментарий</label>
+            <textarea id="templateNote" class="textarea" placeholder="Например: капучино и круассан"></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Сохранить шаблон</button>
+          <button type="button" class="btn btn-secondary" id="cancelTemplateBtn">Отмена</button>
+        </div>
+        <div class="status" id="templateFormStatus"></div>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      try { tg.setHeaderColor?.("secondary_bg_color"); } catch (_) {}
+    }
+
+    const state = {
+      apiKey: "",
+      me: null,
+      summary: null,
+      transactions: [],
+      categories: [],
+      templates: [],
+      budgets: [],
+      budgetsSummary: null,
+      analyticsOverview: null,
+      analyticsSeries: null,
+      insights: null,
+      forecast: null,
+      quickAddPreview: null,
+      quickAddSelectedCategoryId: null,
+      selectedBudgetMonth: "",
+      currentScreen: "dashboardScreen",
+      categoriesFilter: "all",
+      templatesFilter: "all",
+      analyticsPeriod: "month",
+    };
+
+    const els = {
+      welcomeText: document.getElementById("welcomeText"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      toast: document.getElementById("toast"),
+
+      incomeValue: document.getElementById("incomeValue"),
+      expenseValue: document.getElementById("expenseValue"),
+      balanceValue: document.getElementById("balanceValue"),
+      balanceHint: document.getElementById("balanceHint"),
+      summaryStatus: document.getElementById("summaryStatus"),
+      recentTransactions: document.getElementById("recentTransactions"),
+      analyticsBars: document.getElementById("analyticsBars"),
+
+      avgDailyExpense: document.getElementById("avgDailyExpense"),
+      avgDailyExpenseNote: document.getElementById("avgDailyExpenseNote"),
+      safeDailyLimit: document.getElementById("safeDailyLimit"),
+      safeDailyLimitNote: document.getElementById("safeDailyLimitNote"),
+      daysRemaining: document.getElementById("daysRemaining"),
+      daysRemainingNote: document.getElementById("daysRemainingNote"),
+      budgetStatusValue: document.getElementById("budgetStatusValue"),
+      budgetStatusNote: document.getElementById("budgetStatusNote"),
+      insightText: document.getElementById("insightText"),
+
+      forecastExpected: document.getElementById("forecastExpected"),
+      forecastLow: document.getElementById("forecastLow"),
+      forecastHigh: document.getElementById("forecastHigh"),
+      forecastTrend: document.getElementById("forecastTrend"),
+      forecastTrendNote: document.getElementById("forecastTrendNote"),
+      forecastMonthLabel: document.getElementById("forecastMonthLabel"),
+      forecastTopCategoryText: document.getElementById("forecastTopCategoryText"),
+      forecastTopCategoryAmount: document.getElementById("forecastTopCategoryAmount"),
+      forecastTopCategoryChip: document.getElementById("forecastTopCategoryChip"),
+      forecastHistoryChip: document.getElementById("forecastHistoryChip"),
+      forecastStatus: document.getElementById("forecastStatus"),
+
+      analyticsText: document.getElementById("analyticsText"),
+      analyticsAvgCheck: document.getElementById("analyticsAvgCheck"),
+      analyticsTopCategory: document.getElementById("analyticsTopCategory"),
+      analyticsTopDay: document.getElementById("analyticsTopDay"),
+      analyticsPeriodDelta: document.getElementById("analyticsPeriodDelta"),
+      analyticsPeriodButtons: document.getElementById("analyticsPeriodButtons"),
+      categoryDonutWrap: document.getElementById("categoryDonutWrap"),
+      categoryDeltaWrap: document.getElementById("categoryDeltaWrap"),
+      fullAnalyticsBars: document.getElementById("fullAnalyticsBars"),
+      dailyChartWrap: document.getElementById("dailyChartWrap"),
+      periodCompareWrap: document.getElementById("periodCompareWrap"),
+      cumulativeChartWrap: document.getElementById("cumulativeChartWrap"),
+      monthlyChartWrap: document.getElementById("monthlyChartWrap"),
+      profileInfo: document.getElementById("profileInfo"),
+      categoriesManager: document.getElementById("categoriesManager"),
+      templatesManager: document.getElementById("templatesManager"),
+      openAddCategoryBtn: document.getElementById("openAddCategoryBtn"),
+      openAddTemplateBtn: document.getElementById("openAddTemplateBtn"),
+      categoryTypeFilters: document.getElementById("categoryTypeFilters"),
+      templateTypeFilters: document.getElementById("templateTypeFilters"),
+
+      dashboardBudgetLimit: document.getElementById("dashboardBudgetLimit"),
+      dashboardBudgetSpent: document.getElementById("dashboardBudgetSpent"),
+      dashboardBudgetRemaining: document.getElementById("dashboardBudgetRemaining"),
+      dashboardBudgetAlerts: document.getElementById("dashboardBudgetAlerts"),
+
+      transactionsList: document.getElementById("transactionsList"),
+      filterType: document.getElementById("filterType"),
+      filterCategory: document.getElementById("filterCategory"),
+      filterFrom: document.getElementById("filterFrom"),
+      filterTo: document.getElementById("filterTo"),
+      filterSearch: document.getElementById("filterSearch"),
+      applyFiltersBtn: document.getElementById("applyFiltersBtn"),
+      resetFiltersBtn: document.getElementById("resetFiltersBtn"),
+      transactionsAddBtn: document.getElementById("transactionsAddBtn"),
+      openAddIncomeBtn: document.getElementById("openAddIncomeBtn"),
+      openAddExpenseBtn: document.getElementById("openAddExpenseBtn"),
+      quickAddInput: document.getElementById("quickAddInput"),
+      quickAddPreviewBtn: document.getElementById("quickAddPreviewBtn"),
+      quickAddCreateBtn: document.getElementById("quickAddCreateBtn"),
+      quickAddClearBtn: document.getElementById("quickAddClearBtn"),
+      quickAddStatus: document.getElementById("quickAddStatus"),
+      quickAddPreviewWrap: document.getElementById("quickAddPreviewWrap"),
+      quickAddPreviewTitle: document.getElementById("quickAddPreviewTitle"),
+      quickAddPreviewSubtitle: document.getElementById("quickAddPreviewSubtitle"),
+      quickAddPreviewAmount: document.getElementById("quickAddPreviewAmount"),
+      quickAddPreviewType: document.getElementById("quickAddPreviewType"),
+      quickAddPreviewDate: document.getElementById("quickAddPreviewDate"),
+      quickAddPreviewSuggested: document.getElementById("quickAddPreviewSuggested"),
+      quickAddCandidates: document.getElementById("quickAddCandidates"),
+
+      budgetMonthFilter: document.getElementById("budgetMonthFilter"),
+      applyBudgetMonthBtn: document.getElementById("applyBudgetMonthBtn"),
+      openAddBudgetBtn: document.getElementById("openAddBudgetBtn"),
+      budgetSummaryStatus: document.getElementById("budgetSummaryStatus"),
+      budgetTotalLimit: document.getElementById("budgetTotalLimit"),
+      budgetTotalSpent: document.getElementById("budgetTotalSpent"),
+      budgetTotalRemaining: document.getElementById("budgetTotalRemaining"),
+      budgetCountValue: document.getElementById("budgetCountValue"),
+      budgetNormalCount: document.getElementById("budgetNormalCount"),
+      budgetWarningCount: document.getElementById("budgetWarningCount"),
+      budgetExceededCount: document.getElementById("budgetExceededCount"),
+      budgetsList: document.getElementById("budgetsList"),
+
+      transactionModalBackdrop: document.getElementById("transactionModalBackdrop"),
+      transactionModalTitle: document.getElementById("transactionModalTitle"),
+      closeTransactionModalBtn: document.getElementById("closeTransactionModalBtn"),
+      cancelTransactionBtn: document.getElementById("cancelTransactionBtn"),
+      transactionForm: document.getElementById("transactionForm"),
+      transactionId: document.getElementById("transactionId"),
+      transactionType: document.getElementById("transactionType"),
+      transactionAmount: document.getElementById("transactionAmount"),
+      transactionCategory: document.getElementById("transactionCategory"),
+      transactionDate: document.getElementById("transactionDate"),
+      transactionNote: document.getElementById("transactionNote"),
+      transactionFormStatus: document.getElementById("transactionFormStatus"),
+
+      budgetModalBackdrop: document.getElementById("budgetModalBackdrop"),
+      budgetModalTitle: document.getElementById("budgetModalTitle"),
+      closeBudgetModalBtn: document.getElementById("closeBudgetModalBtn"),
+      cancelBudgetBtn: document.getElementById("cancelBudgetBtn"),
+      budgetForm: document.getElementById("budgetForm"),
+      budgetId: document.getElementById("budgetId"),
+      budgetCategory: document.getElementById("budgetCategory"),
+      budgetMonth: document.getElementById("budgetMonth"),
+      budgetLimitAmount: document.getElementById("budgetLimitAmount"),
+      budgetFormStatus: document.getElementById("budgetFormStatus"),
+
+      categoryModalBackdrop: document.getElementById("categoryModalBackdrop"),
+      categoryModalTitle: document.getElementById("categoryModalTitle"),
+      closeCategoryModalBtn: document.getElementById("closeCategoryModalBtn"),
+      cancelCategoryBtn: document.getElementById("cancelCategoryBtn"),
+      categoryForm: document.getElementById("categoryForm"),
+      categoryId: document.getElementById("categoryId"),
+      categoryType: document.getElementById("categoryType"),
+      categoryName: document.getElementById("categoryName"),
+      categoryFormStatus: document.getElementById("categoryFormStatus"),
+
+      templateModalBackdrop: document.getElementById("templateModalBackdrop"),
+      templateModalTitle: document.getElementById("templateModalTitle"),
+      closeTemplateModalBtn: document.getElementById("closeTemplateModalBtn"),
+      cancelTemplateBtn: document.getElementById("cancelTemplateBtn"),
+      templateForm: document.getElementById("templateForm"),
+      templateId: document.getElementById("templateId"),
+      templateType: document.getElementById("templateType"),
+      templateName: document.getElementById("templateName"),
+      templateAmount: document.getElementById("templateAmount"),
+      templateCategory: document.getElementById("templateCategory"),
+      templateNote: document.getElementById("templateNote"),
+      templateFormStatus: document.getElementById("templateFormStatus"),
+    };
+
+    function formatMoney(value) {
+      const num = Number(value || 0);
+      return new Intl.NumberFormat("ru-RU", {
+        style: "currency",
+        currency: "RUB",
+        maximumFractionDigits: 2,
+      }).format(num);
+    }
+
+    function formatCompactMoney(value) {
+      const num = Number(value || 0);
+      if (Math.abs(num) >= 1000000) return `${formatNumber(num / 1000000)}M`;
+      if (Math.abs(num) >= 1000) return `${formatNumber(num / 1000)}k`;
+      return formatNumber(num);
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(Number(value || 0));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function toDatetimeLocalString(date) {
+      const pad = (n) => String(n).padStart(2, "0");
+      const year = date.getFullYear();
+      const month = pad(date.getMonth() + 1);
+      const day = pad(date.getDate());
+      const hour = pad(date.getHours());
+      const minute = pad(date.getMinutes());
+      return `${year}-${month}-${day}T${hour}:${minute}`;
+    }
+
+    function toMonthString(date) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+    }
+
+    function formatDateTime(value) {
+      if (!value) return "—";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    }
+
+    function formatDateLabel(value) {
+      if (!value) return "—";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short" }).format(date);
+    }
+
+    function formatMonthLabel(month) {
+      if (!month) return "—";
+      const [y, m] = String(month).split("-");
+      const date = new Date(Number(y), Number(m) - 1, 1);
+      return new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" }).format(date);
+    }
+
+    function haptic(type = "light") {
+      try {
+        tg?.HapticFeedback?.impactOccurred?.(type);
+      } catch (_) {}
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => els.toast.classList.remove("show"), 2400);
+    }
+
+    function setActiveScreen(screenId) {
+      state.currentScreen = screenId;
+      document.querySelectorAll(".screen").forEach((el) => el.classList.toggle("active", el.id === screenId));
+      document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.screen === screenId));
+      try {
+        if (tg?.BackButton) {
+          if (screenId === "dashboardScreen") tg.BackButton.hide(); else tg.BackButton.show();
+        }
+      } catch (_) {}
+    }
+
+    function getApiBase() {
+      return "/api";
+    }
+
+    async function apiFetch(path, options = {}) {
+      const url = new URL(`${getApiBase()}${path}`, window.location.origin);
+      if (state.apiKey) url.searchParams.set("api_key", state.apiKey);
+
+      const config = { method: "GET", headers: {}, ...options };
+      if (config.body && !(config.body instanceof FormData)) {
+        config.headers["Content-Type"] = "application/json";
+      }
+
+      const response = await fetch(url.toString(), config);
+      const text = await response.text();
+      let data = null;
+      if (text) {
+        try { data = JSON.parse(text); } catch (_) { data = text; }
+      }
+      if (!response.ok) {
+        const detail = (data && typeof data === "object" && data.detail) ? data.detail : `HTTP ${response.status}`;
+        throw new Error(detail);
+      }
+      return data;
+    }
+
+    async function authenticateMiniApp() {
+      const initData = tg?.initData || "";
+      if (!initData) throw new Error("Mini App должна запускаться из Telegram.");
+
+      const response = await fetch(`${getApiBase()}/miniapp/auth/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.detail || "Ошибка авторизации Mini App");
+      state.apiKey = data.api_key;
+    }
+
+    async function loadMe() {
+      state.me = await apiFetch("/me/");
+      const name = state.me.first_name || state.me.username || `ID ${state.me.telegram_id}`;
+      els.welcomeText.textContent = `Привет, ${name}. Всё под контролем.`;
+    }
+
+    async function loadCategories(type = "") {
+      const suffix = type ? `?type=${encodeURIComponent(type)}` : "";
+      state.categories = await apiFetch(`/categories/${suffix}`);
+      fillCategoryFilters();
+      fillTransactionCategorySelect();
+      fillBudgetCategorySelect();
+    }
+
+    function fillCategoryFilters() {
+      const current = els.filterCategory.value;
+      const options = ['<option value="">Все категории</option>']
+        .concat(state.categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)} (${c.type === "income" ? "доход" : "расход"})</option>`));
+      els.filterCategory.innerHTML = options.join("");
+      els.filterCategory.value = current;
+    }
+
+    function fillTransactionCategorySelect() {
+      const type = els.transactionType.value || "expense";
+      const current = els.transactionCategory.value;
+      const filtered = state.categories.filter((c) => c.type === type);
+      els.transactionCategory.innerHTML = ['<option value="">Без категории</option>']
+        .concat(filtered.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`))
+        .join("");
+      els.transactionCategory.value = current;
+    }
+
+    function fillBudgetCategorySelect() {
+      const current = els.budgetCategory.value;
+      const filtered = state.categories.filter((c) => c.type === "expense");
+      els.budgetCategory.innerHTML = ['<option value="">Выбери категорию</option>']
+        .concat(filtered.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`))
+        .join("");
+      els.budgetCategory.value = current;
+    }
+
+    function fillTemplateCategorySelect() {
+      const type = els.templateType.value || "expense";
+      const current = els.templateCategory.value;
+      const filtered = state.categories.filter((c) => c.type === type);
+      els.templateCategory.innerHTML = ['<option value="">Без категории</option>']
+        .concat(filtered.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`))
+        .join("");
+      els.templateCategory.value = current;
+    }
+
+    function applyAnalyticsPeriod(period) {
+      state.analyticsPeriod = period;
+      const now = new Date();
+      const toIso = (d) => d.toISOString().slice(0, 10);
+      let from = "";
+      let to = toIso(now);
+
+      if (period === "month") {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        from = toIso(start);
+      } else if (period === "7d") {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 6);
+        from = toIso(start);
+      } else if (period === "30d") {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 29);
+        from = toIso(start);
+      } else if (period === "90d") {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 89);
+        from = toIso(start);
+      } else if (period === "year") {
+        const start = new Date(now.getFullYear(), 0, 1);
+        from = toIso(start);
+      }
+
+      els.filterFrom.value = from;
+      els.filterTo.value = to;
+      document.querySelectorAll("#analyticsPeriodButtons .seg-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.period === period);
+      });
+    }
+
+    async function loadTemplates(type = "") {
+      const suffix = type ? `?type=${encodeURIComponent(type)}` : "";
+      state.templates = await apiFetch(`/templates/${suffix}`);
+    }
+
+    function buildTransactionsQuery() {
+      const params = new URLSearchParams();
+      if (els.filterType.value) params.set("type", els.filterType.value);
+      if (els.filterCategory.value) params.set("category_id", els.filterCategory.value);
+      if (els.filterFrom.value) params.set("from", els.filterFrom.value);
+      if (els.filterTo.value) params.set("to", els.filterTo.value);
+      if (els.filterSearch.value.trim()) params.set("q", els.filterSearch.value.trim());
+      params.set("limit", "500");
+      return params.toString() ? `?${params.toString()}` : "";
+    }
+
+    function getOverviewQuery() {
+      const params = new URLSearchParams();
+      if (els.filterType.value) params.set("type", els.filterType.value);
+      if (els.filterCategory.value) params.set("category_id", els.filterCategory.value);
+      if (els.filterFrom.value) params.set("from", els.filterFrom.value);
+      if (els.filterTo.value) params.set("to", els.filterTo.value);
+      if (els.filterSearch.value.trim()) params.set("q", els.filterSearch.value.trim());
+      return params.toString() ? `?${params.toString()}` : "";
+    }
+
+    function getSelectedBudgetMonth() {
+      return els.budgetMonthFilter.value || toMonthString(new Date());
+    }
+
+    async function loadTransactions() {
+      state.transactions = await apiFetch(`/transactions/${buildTransactionsQuery()}`);
+    }
+
+    async function loadSummary() {
+      state.summary = await apiFetch(`/summary/${getOverviewQuery()}`);
+    }
+
+    async function loadAnalyticsOverview() {
+      state.analyticsOverview = await apiFetch(`/analytics/overview/${getOverviewQuery()}`);
+    }
+
+    async function loadAnalyticsSeries() {
+      state.analyticsSeries = await apiFetch(`/analytics/series/?months=6`);
+    }
+
+    async function loadInsights() {
+      const month = toMonthString(new Date());
+      state.insights = await apiFetch(`/insights/?month=${encodeURIComponent(month)}`);
+    }
+
+    async function loadForecast() {
+      state.forecast = await apiFetch(`/forecast/`);
+    }
+
+    async function loadBudgets() {
+      state.selectedBudgetMonth = getSelectedBudgetMonth();
+      const month = encodeURIComponent(state.selectedBudgetMonth);
+      state.budgets = await apiFetch(`/budgets/?month=${month}`);
+      state.budgetsSummary = await apiFetch(`/budgets/summary/?month=${month}`);
+    }
+
+    function renderSummary() {
+      const s = state.summary || {};
+      const income = Number(s.income || 0);
+      const expense = Number(s.expense || 0);
+      const balance = Number(s.balance || 0);
+      els.incomeValue.textContent = formatMoney(income);
+      els.expenseValue.textContent = formatMoney(expense);
+      els.balanceValue.textContent = formatMoney(balance);
+      els.balanceValue.className = `metric-value ${balance < 0 ? "metric-expense" : balance > 0 ? "metric-income" : ""}`;
+      els.balanceHint.textContent = balance < 0 ? "Расходов больше, чем доходов" : balance > 0 ? "Доходы перекрывают расходы" : "Баланс ровный";
+      els.summaryStatus.textContent = `Транзакций в выборке: ${s.transactions_count || 0}`;
+    }
+
+    function renderInsights() {
+      const data = state.insights;
+      if (!data) return;
+
+      els.avgDailyExpense.textContent = formatMoney(data.average_daily_expense);
+      els.avgDailyExpenseNote.textContent = `Потрачено за месяц: ${formatMoney(data.spent_amount)}`;
+      els.safeDailyLimit.textContent = formatMoney(data.safe_daily_limit || 0);
+      els.safeDailyLimitNote.textContent = Number(data.budget_limit || 0) > 0
+        ? `Общий лимит: ${formatMoney(data.budget_limit)}`
+        : "Бюджеты на месяц пока не заданы";
+      els.daysRemaining.textContent = `${formatNumber(data.days_remaining || 0)}`;
+      els.daysRemainingNote.textContent = `Прошло дней: ${formatNumber(data.days_passed || 0)} из ${formatNumber(data.days_in_month || 0)}`;
+
+      const statusMap = {
+        no_budget: ["Нет лимитов", "Добавь бюджеты, чтобы считать безопасный дневной лимит."],
+        normal: ["В норме", "Лимиты пока не находятся под угрозой."],
+        warning: ["Риск превышения", "Часть бюджетов почти исчерпана."],
+        exceeded: ["Есть превышение", "По части категорий лимит уже превышен."],
+      };
+      const [statusTitle, statusNote] = statusMap[data.budget_status] || ["—", "—"];
+      els.budgetStatusValue.textContent = statusTitle;
+      els.budgetStatusValue.className = `metric-value ${data.budget_status === "exceeded" ? "metric-expense" : data.budget_status === "warning" ? "metric-warning" : data.budget_status === "normal" ? "metric-income" : ""}`;
+      els.budgetStatusNote.textContent = statusNote;
+
+      const avg = Number(data.average_daily_expense || 0);
+      const safe = Number(data.safe_daily_limit || 0);
+      const daysRemaining = Number(data.days_remaining || 0);
+      let message = `За ${formatMonthLabel(data.month)} потрачено ${formatMoney(data.spent_amount)}.`;
+      if (Number(data.budget_limit || 0) > 0) {
+        if (safe > 0 && avg > safe) {
+          message += ` Сейчас средний расход в день (${formatMoney(avg)}) выше безопасного лимита (${formatMoney(safe)}).`;
+        } else if (safe > 0) {
+          message += ` Текущий темп выглядит безопасно: ${formatMoney(avg)} в день при лимите ${formatMoney(safe)}.`;
+        }
+      } else {
+        message += " Бюджеты ещё не заданы, поэтому безопасный лимит не рассчитывается.";
+      }
+      if (daysRemaining > 0) {
+        message += ` До конца месяца осталось ${daysRemaining} дн.`;
+      }
+      els.insightText.textContent = message;
+    }
+
+    function renderForecast() {
+      const data = state.forecast;
+      if (!data) return;
+      if (!data.ok) {
+        els.forecastExpected.textContent = "—";
+        els.forecastLow.textContent = "—";
+        els.forecastHigh.textContent = "—";
+        els.forecastTrend.textContent = "—";
+        els.forecastMonthLabel.textContent = "Недостаточно данных";
+        els.forecastTopCategoryText.textContent = data.detail || "Недостаточно данных";
+        els.forecastTopCategoryAmount.textContent = "—";
+        els.forecastTopCategoryChip.textContent = "Нет данных";
+        els.forecastHistoryChip.textContent = `История: ${data.history?.length || 0} мес.`;
+        els.forecastStatus.textContent = data.detail || "Для прогноза нужны хотя бы 2 полных месяца расходов.";
+        return;
+      }
+
+      const f = data.forecast || {};
+      els.forecastExpected.textContent = formatMoney(f.predicted_amount);
+      els.forecastLow.textContent = formatMoney(f.low_amount);
+      els.forecastHigh.textContent = formatMoney(f.high_amount);
+      els.forecastMonthLabel.textContent = `Прогноз на ${formatMonthLabel(f.next_month)}`;
+
+      const trend = Number(f.trend_percent || 0);
+      const trendText = Number.isFinite(trend) ? `${trend > 0 ? "+" : ""}${formatNumber(trend)}%` : "—";
+      els.forecastTrend.textContent = trendText;
+      els.forecastTrend.className = `metric-value ${trend > 0 ? "metric-warning" : trend < 0 ? "metric-income" : ""}`;
+      els.forecastTrendNote.textContent = `Последний месяц: ${formatMoney(f.last_month_amount)} • предыдущий: ${formatMoney(f.previous_month_amount)}`;
+
+      if (data.top_category) {
+        els.forecastTopCategoryText.textContent = `Наибольшая доля расходов в последнем полном месяце пришлась на категорию «${data.top_category.category_name}».`;
+        els.forecastTopCategoryAmount.textContent = formatMoney(data.top_category.amount);
+        els.forecastTopCategoryChip.textContent = `${data.top_category.category_name} • ${formatNumber(data.top_category.share_percent)}%`;
+      } else {
+        els.forecastTopCategoryText.textContent = "Нет достаточных данных по категориям последнего полного месяца.";
+        els.forecastTopCategoryAmount.textContent = "—";
+        els.forecastTopCategoryChip.textContent = "Нет данных";
+      }
+      els.forecastHistoryChip.textContent = `История: ${data.history.length} мес.`;
+      els.forecastStatus.textContent = `Оценка строится по истории расходов и устойчива к разовым всплескам.`;
+    }
+
+    function renderRecentTransactions() {
+      const list = state.transactions.slice(0, 5);
+      if (!list.length) {
+        els.recentTransactions.innerHTML = '<div class="empty">Транзакций пока нет.</div>';
+        return;
+      }
+      els.recentTransactions.innerHTML = list.map(renderTransactionCard).join("");
+      attachTransactionActionHandlers(els.recentTransactions);
+    }
+
+    function renderTransactions() {
+      if (!state.transactions.length) {
+        els.transactionsList.innerHTML = '<div class="empty">Ничего не найдено по текущим фильтрам.</div>';
+        return;
+      }
+      els.transactionsList.innerHTML = state.transactions.map(renderTransactionCard).join("");
+      attachTransactionActionHandlers(els.transactionsList);
+    }
+
+    function renderTransactionCard(tx) {
+      const amount = Number(tx.amount || 0);
+      const sign = tx.type === "expense" ? "−" : "+";
+      const category = tx.category?.name || "Без категории";
+      return `
+        <div class="tx-item">
+          <div class="tx-head">
+            <div>
+              <div class="tx-title">${escapeHtml(tx.note || category)}</div>
+              <div class="tx-subtitle">${escapeHtml(category)} • ${formatDateTime(tx.date)}</div>
+            </div>
+            <div class="tx-amount ${tx.type === "expense" ? "expense" : "income"}">${sign}${formatMoney(amount)}</div>
+          </div>
+          <div class="tx-meta">
+            <span class="chip">${tx.type === "expense" ? "Расход" : "Доход"}</span>
+            ${tx.category?.name ? `<span class="chip">${escapeHtml(tx.category.name)}</span>` : ""}
+          </div>
+          <div class="tx-actions">
+            <button class="btn btn-primary btn-sm" data-action="duplicate-tx" data-id="${tx.id}">Повторить</button>
+            <button class="btn btn-secondary btn-sm" data-action="edit-tx" data-id="${tx.id}">Изменить</button>
+            <button class="btn btn-danger btn-sm" data-action="delete-tx" data-id="${tx.id}">Удалить</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAnalyticsBars(target, items, emptyText = "Нет данных для аналитики.") {
+      if (!items || !items.length) {
+        target.innerHTML = `<div class="empty">${escapeHtml(emptyText)}</div>`;
+        return;
+      }
+      const max = Math.max(...items.map((x) => Number(x.amount || 0)), 0);
+      target.innerHTML = items.map((item) => {
+        const amount = Number(item.amount || 0);
+        const percent = max > 0 ? Math.max(6, Math.round((amount / max) * 100)) : 0;
+        return `
+          <div class="bar-row">
+            <div class="bar-top">
+              <span>${escapeHtml(item.category_name || item.label || "Без названия")}</span>
+              <span>${formatMoney(amount)}${item.percent ? ` • ${formatNumber(item.percent)}%` : ""}</span>
+            </div>
+            <div class="bar"><div class="bar-fill" style="width:${percent}%"></div></div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderDashboardAnalytics() {
+      const rows = state.analyticsOverview?.top_expense_categories || [];
+      renderAnalyticsBars(els.analyticsBars, rows.slice(0, 5), "Нет расходов для аналитики.");
+    }
+
+    function renderAnalyticsScreen() {
+      const overview = state.analyticsOverview;
+      const series = state.analyticsSeries;
+      if (!overview) return;
+
+      const summary = overview.summary || {};
+      const prev = overview.previous_period;
+      els.analyticsAvgCheck.textContent = formatMoney(summary.average_expense_check || 0);
+      els.analyticsTopCategory.textContent = overview.top_expense_category ? overview.top_expense_category.category_name : "—";
+      els.analyticsTopDay.textContent = overview.top_spending_day ? `${formatDateLabel(overview.top_spending_day.date)} • ${formatMoney(overview.top_spending_day.amount)}` : "—";
+      const deltaRaw = Number(prev?.expense_change_percent || 0);
+      els.analyticsPeriodDelta.textContent = prev ? `${deltaRaw > 0 ? "+" : ""}${formatNumber(deltaRaw)}%` : "—";
+      let text = `Доходы: ${formatMoney(summary.income)}, расходы: ${formatMoney(summary.expense)}, баланс: ${formatMoney(summary.balance)}.`;
+      if (prev && prev.expense_change_percent != null) {
+        const change = Number(prev.expense_change_percent || 0);
+        text += ` По сравнению с предыдущим периодом расходы ${change > 0 ? "выросли" : change < 0 ? "снизились" : "не изменились"} на ${formatNumber(Math.abs(change))}%.`;
+      }
+      els.analyticsText.textContent = text;
+
+      const dailyExpenses = overview.daily_expenses || [];
+      renderAnalyticsBars(els.fullAnalyticsBars, overview.top_expense_categories || [], "Нет расходов за выбранный период.");
+      renderCategoryDonut(overview.top_expense_categories || []);
+      renderPeriodComparison(summary, prev);
+      renderCategoryDeltas(overview.category_deltas || []);
+      els.dailyChartWrap.innerHTML = renderMiniBarChart(dailyExpenses, {
+        valueKey: "amount",
+        labelKey: "date",
+        colorClass: "bar-fill-danger",
+        money: true,
+        labelFormatter: formatDateLabel,
+        emptyText: "Нет дневных данных для графика.",
+      });
+      els.cumulativeChartWrap.innerHTML = renderCumulativeExpenseChart(dailyExpenses);
+      els.monthlyChartWrap.innerHTML = renderMonthlyTrendChart(series?.items || []);
+    }
+
+    function renderMiniBarChart(items, options = {}) {
+      if (!items.length) return `<div class="empty">${escapeHtml(options.emptyText || "Нет данных")}</div>`;
+      const max = Math.max(...items.map((item) => Number(item[options.valueKey] || 0)), 0);
+      return `
+        <div class="bar-wrap">
+          ${items.map((item) => {
+            const value = Number(item[options.valueKey] || 0);
+            const width = max > 0 ? Math.max(6, Math.round((value / max) * 100)) : 0;
+            const label = options.labelFormatter ? options.labelFormatter(item[options.labelKey]) : item[options.labelKey];
+            return `
+              <div class="bar-row">
+                <div class="bar-top">
+                  <span>${escapeHtml(label)}</span>
+                  <span>${options.money ? formatMoney(value) : formatNumber(value)}</span>
+                </div>
+                <div class="bar"><div class="bar-fill ${options.colorClass || ""}" style="width:${width}%"></div></div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderDashboardBudgets() {
+      const s = state.budgetsSummary;
+      if (!s) return;
+      els.dashboardBudgetLimit.textContent = formatMoney(s.total_limit);
+      els.dashboardBudgetSpent.textContent = formatMoney(s.total_spent);
+      els.dashboardBudgetRemaining.textContent = formatMoney(s.total_remaining);
+      els.dashboardBudgetAlerts.textContent = `${Number(s.warning_count || 0) + Number(s.exceeded_count || 0)}`;
+    }
+
+    function renderBudgetsSummary() {
+      const s = state.budgetsSummary;
+      if (!s) return;
+      els.budgetSummaryStatus.textContent = `Период: ${formatMonthLabel(s.month_label)}.`;
+      els.budgetTotalLimit.textContent = formatMoney(s.total_limit);
+      els.budgetTotalSpent.textContent = formatMoney(s.total_spent);
+      els.budgetTotalRemaining.textContent = formatMoney(s.total_remaining);
+      els.budgetCountValue.textContent = String(s.budgets_count || 0);
+      els.budgetNormalCount.textContent = String(s.normal_count || 0);
+      els.budgetWarningCount.textContent = String(s.warning_count || 0);
+      els.budgetExceededCount.textContent = String(s.exceeded_count || 0);
+    }
+
+    function getBudgetStatusClass(status) {
+      if (status === "exceeded") return "chip-danger";
+      if (status === "warning") return "chip-warning";
+      return "chip-ok";
+    }
+
+    function getBudgetBarClass(status) {
+      if (status === "exceeded") return "bar-fill-danger";
+      if (status === "warning") return "bar-fill-warning";
+      return "bar-fill-success";
+    }
+
+    function renderBudgetCard(budget) {
+      const usage = Math.min(100, Math.max(0, Number(budget.usage_percent || 0)));
+      return `
+        <div class="budget-item">
+          <div class="budget-head">
+            <div>
+              <div class="budget-title">${escapeHtml(budget.category?.name || budget.category_name || "Без категории")}</div>
+              <div class="budget-subtitle">${escapeHtml(formatMonthLabel(budget.month))}</div>
+            </div>
+            <div class="budget-amount">${formatMoney(budget.limit_amount)}</div>
+          </div>
+          <div class="budget-meta">
+            <span class="chip ${getBudgetStatusClass(budget.status)}">${escapeHtml(budget.status_label || "Статус")}</span>
+            <span class="chip">Потрачено: ${formatMoney(budget.spent_amount)}</span>
+            <span class="chip">Осталось: ${formatMoney(budget.remaining_amount)}</span>
+          </div>
+          <div style="margin-top:12px;">
+            <div class="bar"><div class="bar-fill ${getBudgetBarClass(budget.status)}" style="width:${usage}%"></div></div>
+          </div>
+          <div class="budget-actions">
+            <button class="btn btn-secondary btn-sm" data-action="edit-budget" data-id="${budget.id}">Изменить</button>
+            <button class="btn btn-danger btn-sm" data-action="delete-budget" data-id="${budget.id}">Удалить</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBudgetsList() {
+      if (!state.budgets.length) {
+        els.budgetsList.innerHTML = '<div class="empty">Бюджеты на выбранный месяц не заданы.</div>';
+        return;
+      }
+      els.budgetsList.innerHTML = state.budgets.map(renderBudgetCard).join("");
+      attachBudgetActionHandlers(els.budgetsList);
+    }
+
+    function renderProfile() {
+      const me = state.me || {};
+      const summary = state.summary || {};
+      const rows = [
+        ["Имя", me.first_name || "—"],
+        ["Username", me.username ? `@${me.username}` : "—"],
+        ["Telegram ID", me.telegram_id || "—"],
+        ["Пользователь ID", me.id || "—"],
+        ["Доходы", formatMoney(summary.income || 0)],
+        ["Расходы", formatMoney(summary.expense || 0)],
+        ["Баланс", formatMoney(summary.balance || 0)],
+      ];
+      els.profileInfo.innerHTML = rows.map(([label, value]) => `
+        <div class="profile-row">
+          <div class="section-subtitle" style="margin:0;">${escapeHtml(label)}</div>
+          <div style="font-weight:700; text-align:right;">${escapeHtml(String(value))}</div>
+        </div>
+      `).join("");
+    }
+
+
+
+    function renderCategoryManager() {
+      let items = state.categories.slice();
+      if (state.categoriesFilter !== "all") items = items.filter((item) => item.type === state.categoriesFilter);
+      if (!items.length) {
+        els.categoriesManager.innerHTML = '<div class="empty">Категорий пока нет.</div>';
+        return;
+      }
+      els.categoriesManager.innerHTML = items.map((item) => `
+        <div class="manager-item">
+          <div class="manager-head">
+            <div>
+              <div class="manager-title">${escapeHtml(item.name)}</div>
+              <div class="manager-subtitle">${item.type === "expense" ? "Категория расходов" : "Категория доходов"}</div>
+            </div>
+            <span class="chip ${item.type === "expense" ? "chip-warning" : "chip-ok"}">${item.type === "expense" ? "Расход" : "Доход"}</span>
+          </div>
+          <div class="tx-actions">
+            <button class="btn btn-secondary btn-sm" data-action="edit-category" data-id="${item.id}">Изменить</button>
+            <button class="btn btn-danger btn-sm" data-action="delete-category" data-id="${item.id}">Удалить</button>
+          </div>
+        </div>
+      `).join("");
+      attachCategoryActionHandlers(els.categoriesManager);
+    }
+
+    function renderTemplatesManager() {
+      let items = state.templates.slice();
+      if (state.templatesFilter !== "all") items = items.filter((item) => item.type === state.templatesFilter);
+      if (!items.length) {
+        els.templatesManager.innerHTML = '<div class="empty">Шаблонов пока нет.</div>';
+        return;
+      }
+      els.templatesManager.innerHTML = items.map((item) => `
+        <div class="manager-item">
+          <div class="manager-head">
+            <div>
+              <div class="manager-title">${escapeHtml(item.name)}</div>
+              <div class="manager-subtitle">${escapeHtml(item.category?.name || item.category_name || "Без категории")} • ${escapeHtml(item.note || "Без комментария")}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="manager-title">${item.amount ? formatMoney(item.amount) : "—"}</div>
+              <div class="manager-subtitle">${item.type === "expense" ? "Расход" : "Доход"}</div>
+            </div>
+          </div>
+          <div class="tx-actions">
+            <button class="btn btn-primary btn-sm" data-action="use-template" data-id="${item.id}">Использовать</button>
+            <button class="btn btn-secondary btn-sm" data-action="edit-template" data-id="${item.id}">Изменить</button>
+            <button class="btn btn-danger btn-sm" data-action="delete-template" data-id="${item.id}">Удалить</button>
+          </div>
+        </div>
+      `).join("");
+      attachTemplateActionHandlers(els.templatesManager);
+    }
+
+    function renderCategoryDonut(items) {
+      if (!items?.length) {
+        els.categoryDonutWrap.innerHTML = '<div class="empty">Нет данных для кольцевой диаграммы.</div>';
+        return;
+      }
+      const palette = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4", "#84cc16"];
+      const rows = items.slice(0, 6);
+      const total = rows.reduce((acc, item) => acc + Number(item.amount || 0), 0);
+      const radius = 74;
+      const stroke = 22;
+      const size = 220;
+      const center = size / 2;
+      const circumference = 2 * Math.PI * radius;
+      let offset = 0;
+      const slices = rows.map((item, idx) => {
+        const value = Number(item.amount || 0);
+        const ratio = total > 0 ? value / total : 0;
+        const length = ratio * circumference;
+        const slice = `<circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="${palette[idx % palette.length]}" stroke-width="${stroke}" stroke-linecap="butt" stroke-dasharray="${length} ${circumference}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${center} ${center})"></circle>`;
+        offset += length;
+        return slice;
+      }).join("");
+      const legend = rows.map((item, idx) => {
+        const amount = Number(item.amount || 0);
+        return `
+          <div class="legend-item">
+            <span class="legend-dot" style="background:${palette[idx % palette.length]}"></span>
+            <div class="legend-item-main">
+              <div class="legend-item-title">${escapeHtml(item.category_name || 'Без категории')}</div>
+              <div class="legend-item-subtitle">${formatNumber(item.percent || 0)}% от расходов</div>
+            </div>
+            <div class="legend-item-value">${formatMoney(amount)}</div>
+          </div>
+        `;
+      }).join("");
+      els.categoryDonutWrap.innerHTML = `
+        <div class="donut-layout">
+          <div class="donut-svg-wrap">
+            <svg class="svg-chart" viewBox="0 0 ${size} ${size}" aria-label="Структура расходов">
+              <circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="#1f2937" stroke-width="${stroke}"></circle>
+              ${slices}
+            </svg>
+            <div class="donut-center">
+              <strong>${formatMoney(total)}</strong>
+              <small>всего расходов</small>
+            </div>
+          </div>
+          <div class="legend-list">${legend}</div>
+        </div>
+      `;
+    }
+
+    function renderPeriodComparison(summary, previous) {
+      if (!summary || !previous) {
+        els.periodCompareWrap.innerHTML = '<div class="empty">Недостаточно данных для сравнения периода.</div>';
+        return;
+      }
+      const metrics = [
+        { key: 'income', label: 'Доходы' },
+        { key: 'expense', label: 'Расходы' },
+        { key: 'balance', label: 'Баланс' },
+      ];
+      const max = Math.max(...metrics.flatMap((m) => [Math.abs(Number(summary[m.key] || 0)), Math.abs(Number(previous[m.key] || 0))]), 0);
+      els.periodCompareWrap.innerHTML = `
+        <div class="compare-grid">
+          ${metrics.map((metric) => {
+            const current = Math.abs(Number(summary[metric.key] || 0));
+            const prev = Math.abs(Number(previous[metric.key] || 0));
+            const currentW = max > 0 ? Math.max(current > 0 ? 8 : 0, Math.round((current / max) * 100)) : 0;
+            const prevW = max > 0 ? Math.max(prev > 0 ? 8 : 0, Math.round((prev / max) * 100)) : 0;
+            return `
+              <div class="compare-item">
+                <div class="compare-item-title">${metric.label}</div>
+                <div class="compare-bars">
+                  <div class="compare-bar-label"><span>Сейчас</span><strong>${formatMoney(Number(summary[metric.key] || 0))}</strong></div>
+                  <div class="compare-bar-track"><div class="compare-bar-fill current" style="width:${currentW}%"></div></div>
+                  <div class="compare-bar-label"><span>Раньше</span><strong>${formatMoney(Number(previous[metric.key] || 0))}</strong></div>
+                  <div class="compare-bar-track"><div class="compare-bar-fill previous" style="width:${prevW}%"></div></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="chart-caption">Текущий период автоматически сравнивается с предыдущим аналогичным промежутком.</div>
+      `;
+    }
+
+    function buildLineChartSvg(items, seriesDefs, options = {}) {
+      if (!items?.length) {
+        return `<div class="empty">${escapeHtml(options.emptyText || 'Нет данных')}</div>`;
+      }
+      const width = 640;
+      const height = 260;
+      const pad = { top: 18, right: 16, bottom: 34, left: 42 };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+      const maxValue = Math.max(...seriesDefs.flatMap((series) => items.map((item) => Number(item[series.key] || 0))), 0);
+      const safeMax = maxValue <= 0 ? 1 : maxValue;
+      const x = (idx) => pad.left + (items.length === 1 ? plotW / 2 : (idx * plotW) / (items.length - 1));
+      const y = (val) => pad.top + plotH - (Number(val || 0) / safeMax) * plotH;
+      const grid = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+        const yy = pad.top + plotH * ratio;
+        const value = safeMax * (1 - ratio);
+        return `
+          <line x1="${pad.left}" y1="${yy}" x2="${width - pad.right}" y2="${yy}" class="svg-grid-line"></line>
+          <text x="${pad.left - 8}" y="${yy + 4}" text-anchor="end" class="svg-axis-text">${formatCompactMoney(value)}</text>
+        `;
+      }).join('');
+      const labels = items.map((item, idx) => {
+        const xx = x(idx);
+        const label = options.labelFormatter ? options.labelFormatter(item[options.labelKey || 'label']) : item[options.labelKey || 'label'];
+        return `<text x="${xx}" y="${height - 10}" text-anchor="middle" class="svg-axis-text">${escapeHtml(String(label ?? ''))}</text>`;
+      }).join('');
+      const seriesSvg = seriesDefs.map((series) => {
+        const points = items.map((item, idx) => `${x(idx)},${y(item[series.key])}`).join(' ');
+        let area = '';
+        if (series.area) {
+          const firstX = x(0);
+          const lastX = x(items.length - 1);
+          area = `<path d="M ${firstX} ${pad.top + plotH} L ${points.replace(/ /g, ' L ')} L ${lastX} ${pad.top + plotH} Z" class="svg-fill-cumulative"></path>`;
+        }
+        const dots = items.map((item, idx) => `<circle cx="${x(idx)}" cy="${y(item[series.key])}" r="4" class="${series.dotClass}"></circle>`).join('');
+        return `${area}<polyline points="${points}" class="svg-line ${series.lineClass}"></polyline>${dots}`;
+      }).join('');
+      return `
+        <svg class="svg-chart" viewBox="0 0 ${width} ${height}" role="img">
+          ${grid}
+          ${seriesSvg}
+          ${labels}
+        </svg>
+      `;
+    }
+
+    function renderCumulativeExpenseChart(items) {
+      if (!items?.length) return '<div class="empty">Нет данных для накопительного графика.</div>';
+      let running = 0;
+      const prepared = items.map((item) => {
+        running += Number(item.amount || 0);
+        return { label: item.date, cumulative: running };
+      });
+      return buildLineChartSvg(prepared, [
+        { key: 'cumulative', lineClass: 'svg-line-cumulative', dotClass: 'dot-cumulative', area: true },
+      ], {
+        labelKey: 'label',
+        labelFormatter: formatDateLabel,
+        emptyText: 'Нет данных для накопительного графика.',
+      }) + `<div class="chart-caption">Последняя точка показывает, сколько расходов накопилось к концу периода.</div>`;
+    }
+
+    function renderMonthlyTrendChart(items) {
+      if (!items?.length) return '<div class="empty">Нет месячных данных для графика.</div>';
+      const prepared = items.map((item) => ({
+        label: item.month,
+        income: Number(item.income || 0),
+        expense: Number(item.expense || 0),
+        balance: Math.max(Number(item.balance || 0), 0),
+      }));
+      return buildLineChartSvg(prepared, [
+        { key: 'income', lineClass: 'svg-line-income', dotClass: 'dot-income' },
+        { key: 'expense', lineClass: 'svg-line-expense', dotClass: 'dot-expense' },
+        { key: 'balance', lineClass: 'svg-line-balance', dotClass: 'dot-balance' },
+      ], {
+        labelKey: 'label',
+        labelFormatter: formatMonthLabel,
+        emptyText: 'Нет месячных данных для графика.',
+      }) + `<div class="chart-caption">Три линии помогают сразу увидеть, где растут доходы, расходы и свободный остаток.</div>`;
+    }
+
+    function renderCategoryDeltas(items) {
+      if (!items?.length) {
+        els.categoryDeltaWrap.innerHTML = '<div class="empty">Недостаточно данных для сравнения периодов.</div>';
+        return;
+      }
+      const max = Math.max(...items.map((item) => Math.abs(Number(item.delta_amount || 0))), 0);
+      els.categoryDeltaWrap.innerHTML = items.map((item) => {
+        const delta = Number(item.delta_amount || 0);
+        const width = max > 0 ? Math.max(6, Math.round((Math.abs(delta) / max) * 100)) : 0;
+        const cls = delta > 0 ? "bar-fill-warning" : delta < 0 ? "bar-fill-success" : "";
+        return `
+          <div class="bar-row">
+            <div class="bar-top">
+              <span>${escapeHtml(item.category_name)}</span>
+              <span>${delta > 0 ? "+" : ""}${formatMoney(delta)} • ${Number(item.delta_percent || 0) > 0 ? "+" : ""}${formatNumber(item.delta_percent)}%</span>
+            </div>
+            <div class="bar"><div class="bar-fill ${cls}" style="width:${width}%"></div></div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function openCategoryModal(mode = "create", category = null) {
+      els.categoryForm.reset();
+      els.categoryFormStatus.textContent = "";
+      els.categoryId.value = category?.id || "";
+      els.categoryType.value = category?.type || "expense";
+      els.categoryName.value = category?.name || "";
+      els.categoryModalTitle.textContent = mode === "edit" ? "Изменить категорию" : "Новая категория";
+      els.categoryModalBackdrop.classList.add("show");
+    }
+
+    function closeCategoryModal() {
+      els.categoryModalBackdrop.classList.remove("show");
+    }
+
+    async function submitCategoryForm(event) {
+      event.preventDefault();
+      els.categoryFormStatus.textContent = "Сохраняем...";
+      const id = els.categoryId.value;
+      const payload = { type: els.categoryType.value, name: els.categoryName.value.trim() };
+      const path = id ? `/categories/${id}/` : "/categories/";
+      const method = id ? "PATCH" : "POST";
+      try {
+        await apiFetch(path, { method, body: JSON.stringify(payload) });
+        showToast(id ? "Категория обновлена" : "Категория добавлена");
+        closeCategoryModal();
+        await loadCategories();
+        renderCategoryManager();
+        fillTemplateCategorySelect();
+      } catch (error) {
+        els.categoryFormStatus.textContent = error.message;
+      }
+    }
+
+    async function deleteCategory(categoryId) {
+      const ok = await confirmAction("Удалить категорию?", "У транзакций категория станет пустой, а связанные бюджеты будут удалены.");
+      if (!ok) return;
+      await apiFetch(`/categories/${categoryId}/`, { method: "DELETE" });
+      showToast("Категория удалена");
+      await loadCategories();
+      renderCategoryManager();
+      await reloadAllData();
+    }
+
+    function openTemplateModal(mode = "create", template = null) {
+      els.templateForm.reset();
+      els.templateFormStatus.textContent = "";
+      els.templateId.value = template?.id || "";
+      els.templateType.value = template?.type || "expense";
+      fillTemplateCategorySelect();
+      els.templateCategory.value = template?.category?.id || template?.category_id || "";
+      els.templateName.value = template?.name || "";
+      els.templateAmount.value = template?.amount || "";
+      els.templateNote.value = template?.note || "";
+      els.templateModalTitle.textContent = mode === "edit" ? "Изменить шаблон" : "Новый шаблон";
+      els.templateModalBackdrop.classList.add("show");
+    }
+
+    function closeTemplateModal() {
+      els.templateModalBackdrop.classList.remove("show");
+    }
+
+    async function submitTemplateForm(event) {
+      event.preventDefault();
+      els.templateFormStatus.textContent = "Сохраняем...";
+      const id = els.templateId.value;
+      const payload = {
+        type: els.templateType.value,
+        name: els.templateName.value.trim(),
+        amount: els.templateAmount.value || null,
+        category_id: els.templateCategory.value || null,
+        note: els.templateNote.value.trim(),
+      };
+      const path = id ? `/templates/${id}/` : "/templates/";
+      const method = id ? "PATCH" : "POST";
+      try {
+        await apiFetch(path, { method, body: JSON.stringify(payload) });
+        showToast(id ? "Шаблон обновлён" : "Шаблон создан");
+        closeTemplateModal();
+        await loadTemplates();
+        renderTemplatesManager();
+      } catch (error) {
+        els.templateFormStatus.textContent = error.message;
+      }
+    }
+
+    async function deleteTemplate(templateId) {
+      const ok = await confirmAction("Удалить шаблон?", "Действие нельзя отменить.");
+      if (!ok) return;
+      await apiFetch(`/templates/${templateId}/`, { method: "DELETE" });
+      showToast("Шаблон удалён");
+      await loadTemplates();
+      renderTemplatesManager();
+    }
+
+    async function useTemplate(templateId) {
+      await apiFetch(`/templates/${templateId}/use/`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      haptic("medium");
+      showToast("Операция добавлена из шаблона");
+      await reloadAllData();
+      setActiveScreen("transactionsScreen");
+    }
+
+    async function repeatTransaction(txId) {
+      await apiFetch(`/transactions/${txId}/repeat/`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      haptic("medium");
+      showToast("Транзакция повторена");
+      await reloadAllData();
+    }
+
+    function attachCategoryActionHandlers(container) {
+      container.querySelectorAll('[data-action="edit-category"]').forEach((btn) => {
+        const item = state.categories.find((x) => Number(x.id) === Number(btn.dataset.id));
+        btn.onclick = () => openCategoryModal("edit", item);
+      });
+      container.querySelectorAll('[data-action="delete-category"]').forEach((btn) => {
+        btn.onclick = () => deleteCategory(Number(btn.dataset.id));
+      });
+    }
+
+    function attachTemplateActionHandlers(container) {
+      container.querySelectorAll('[data-action="edit-template"]').forEach((btn) => {
+        const item = state.templates.find((x) => Number(x.id) === Number(btn.dataset.id));
+        btn.onclick = () => openTemplateModal("edit", item);
+      });
+      container.querySelectorAll('[data-action="delete-template"]').forEach((btn) => {
+        btn.onclick = () => deleteTemplate(Number(btn.dataset.id));
+      });
+      container.querySelectorAll('[data-action="use-template"]').forEach((btn) => {
+        btn.onclick = () => useTemplate(Number(btn.dataset.id));
+      });
+    }
+
+    function resetQuickAddPreview() {
+      state.quickAddPreview = null;
+      state.quickAddSelectedCategoryId = null;
+      els.quickAddPreviewWrap.style.display = "none";
+      els.quickAddPreviewTitle.textContent = "Предпросмотр";
+      els.quickAddPreviewSubtitle.textContent = "—";
+      els.quickAddPreviewAmount.textContent = "—";
+      els.quickAddPreviewAmount.className = "tx-amount";
+      els.quickAddPreviewType.textContent = "—";
+      els.quickAddPreviewDate.textContent = "—";
+      els.quickAddPreviewSuggested.textContent = "Категория: —";
+      els.quickAddCandidates.innerHTML = "";
+    }
+
+    function renderQuickAddPreview() {
+      const data = state.quickAddPreview;
+      if (!data) {
+        resetQuickAddPreview();
+        return;
+      }
+
+      els.quickAddPreviewWrap.style.display = "block";
+      els.quickAddPreviewTitle.textContent = data.note || "Без комментария";
+      els.quickAddPreviewSubtitle.textContent = `Исходная строка: ${data.raw_text}`;
+      els.quickAddPreviewAmount.textContent = `${data.type === "income" ? "+" : "-"}${formatMoney(data.amount)}`;
+      els.quickAddPreviewAmount.className = `tx-amount ${data.type}`;
+      els.quickAddPreviewType.textContent = data.type === "income" ? "Доход" : "Расход";
+      els.quickAddPreviewDate.textContent = `${data.parsed_date} ${data.parsed_time}`;
+
+      const selectedId = state.quickAddSelectedCategoryId || data.suggested_category_id;
+      const selectedCandidate = (data.category_candidates || []).find((item) => Number(item.id) === Number(selectedId));
+      const selectedName = selectedCandidate?.name || data.suggested_category_name || "не выбрана";
+      els.quickAddPreviewSuggested.textContent = `Категория: ${selectedName}`;
+
+      if (!data.category_candidates?.length) {
+        els.quickAddCandidates.innerHTML = '<span class="chip">Нет явных кандидатов категории</span>';
+        return;
+      }
+
+      els.quickAddCandidates.innerHTML = data.category_candidates.map((item) => {
+        const active = Number(selectedId) === Number(item.id);
+        return `
+          <button
+            type="button"
+            class="btn btn-sm ${active ? "btn-primary" : "btn-secondary"}"
+            data-action="quick-category"
+            data-id="${item.id}"
+          >
+            ${escapeHtml(item.name)} · ${item.score}
+          </button>
+        `;
+      }).join("");
+
+      els.quickAddCandidates.querySelectorAll('[data-action="quick-category"]').forEach((btn) => {
+        btn.onclick = () => {
+          state.quickAddSelectedCategoryId = Number(btn.dataset.id);
+          haptic("light");
+          renderQuickAddPreview();
+        };
+      });
+    }
+
+    async function handleQuickAddPreview() {
+      const text = els.quickAddInput.value.trim();
+      els.quickAddStatus.textContent = "";
+      if (!text) {
+        els.quickAddStatus.textContent = "Введите строку для быстрого разбора.";
+        return;
+      }
+
+      try {
+        const data = await apiFetch("/transactions/quick-add/preview/", {
+          method: "POST",
+          body: JSON.stringify({ text }),
+        });
+        state.quickAddPreview = data;
+        state.quickAddSelectedCategoryId = data.suggested_category_id || null;
+        renderQuickAddPreview();
+        haptic("light");
+        els.quickAddStatus.textContent = "Строка успешно разобрана.";
+      } catch (error) {
+        resetQuickAddPreview();
+        els.quickAddStatus.textContent = error.message;
+      }
+    }
+
+    async function handleQuickAddCreate() {
+      const text = els.quickAddInput.value.trim();
+      els.quickAddStatus.textContent = "";
+      if (!text) {
+        els.quickAddStatus.textContent = "Введите строку операции.";
+        return;
+      }
+
+      try {
+        if (!state.quickAddPreview || state.quickAddPreview.raw_text !== text) {
+          await handleQuickAddPreview();
+          if (!state.quickAddPreview) return;
+        }
+
+        const payload = { text };
+        if (state.quickAddSelectedCategoryId) {
+          payload.category_id = state.quickAddSelectedCategoryId;
+        }
+
+        await apiFetch("/transactions/quick-add/create/", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        haptic("medium");
+        showToast("Быстрая транзакция добавлена");
+        els.quickAddStatus.textContent = "Операция сохранена.";
+        els.quickAddInput.value = "";
+        resetQuickAddPreview();
+        await reloadAllData();
+      } catch (error) {
+        els.quickAddStatus.textContent = error.message;
+      }
+    }
+
+    function attachTransactionActionHandlers(container) {
+      container.querySelectorAll('[data-action="edit-tx"]').forEach((btn) => {
+        btn.onclick = () => openEditTransactionModal(Number(btn.dataset.id));
+      });
+      container.querySelectorAll('[data-action="delete-tx"]').forEach((btn) => {
+        btn.onclick = () => deleteTransaction(Number(btn.dataset.id));
+      });
+      container.querySelectorAll('[data-action="duplicate-tx"]').forEach((btn) => {
+        btn.onclick = () => repeatTransaction(Number(btn.dataset.id));
+      });
+    }
+
+    function attachBudgetActionHandlers(container) {
+      container.querySelectorAll('[data-action="edit-budget"]').forEach((btn) => {
+        btn.onclick = () => openEditBudgetModal(Number(btn.dataset.id));
+      });
+      container.querySelectorAll('[data-action="delete-budget"]').forEach((btn) => {
+        btn.onclick = () => deleteBudget(Number(btn.dataset.id));
+      });
+    }
+
+    function openTransactionModal(mode = "create", tx = null, presetType = "expense") {
+      els.transactionForm.reset();
+      els.transactionFormStatus.textContent = "";
+      els.transactionId.value = tx?.id || "";
+      els.transactionType.value = tx?.type || presetType;
+      fillTransactionCategorySelect();
+      els.transactionCategory.value = tx?.category?.id || tx?.category_id || "";
+      els.transactionAmount.value = tx?.amount || "";
+      els.transactionDate.value = tx?.date ? String(tx.date).slice(0, 16) : toDatetimeLocalString(new Date());
+      els.transactionNote.value = tx?.note || "";
+      els.transactionModalTitle.textContent = mode === "edit" ? "Изменить транзакцию" : "Новая транзакция";
+      els.transactionModalBackdrop.classList.add("show");
+    }
+
+    function closeTransactionModal() {
+      els.transactionModalBackdrop.classList.remove("show");
+      delete els.transactionForm.dataset.templateId;
+    }
+
+    async function openEditTransactionModal(txId) {
+      const tx = state.transactions.find((item) => Number(item.id) === Number(txId)) || await apiFetch(`/transactions/${txId}/`);
+      openTransactionModal("edit", tx, tx.type || "expense");
+    }
+
+    async function confirmAction(title, message) {
+      if (tg?.showConfirm) {
+        return await new Promise((resolve) => tg.showConfirm(`${title}\n\n${message}`, resolve));
+      }
+      return window.confirm(`${title}\n\n${message}`);
+    }
+
+    async function deleteTransaction(txId) {
+      const ok = await confirmAction("Удалить транзакцию?", "Действие нельзя отменить.");
+      if (!ok) return;
+      await apiFetch(`/transactions/${txId}/`, { method: "DELETE" });
+      haptic("medium");
+      showToast("Транзакция удалена");
+      await reloadAllData();
+    }
+
+    async function submitTransactionForm(event) {
+      event.preventDefault();
+      els.transactionFormStatus.textContent = "Сохраняем...";
+      const id = els.transactionId.value;
+      const payload = {
+        type: els.transactionType.value,
+        amount: els.transactionAmount.value,
+        category_id: els.transactionCategory.value || null,
+        date: els.transactionDate.value,
+        note: els.transactionNote.value.trim(),
+      };
+      if (els.transactionForm.dataset.templateId) payload.template_id = els.transactionForm.dataset.templateId;
+      const path = id ? `/transactions/${id}/` : "/transactions/";
+      const method = id ? "PATCH" : "POST";
+      try {
+        await apiFetch(path, { method, body: JSON.stringify(payload) });
+        haptic("medium");
+        showToast(id ? "Транзакция обновлена" : "Транзакция добавлена");
+        closeTransactionModal();
+        await reloadAllData();
+      } catch (error) {
+        els.transactionFormStatus.textContent = error.message;
+      }
+    }
+
+    function openBudgetModal(mode = "create", budget = null) {
+      els.budgetForm.reset();
+      els.budgetFormStatus.textContent = "";
+      els.budgetId.value = budget?.id || "";
+      fillBudgetCategorySelect();
+      els.budgetCategory.value = budget?.category?.id || budget?.category_id || "";
+      els.budgetMonth.value = budget?.month ? String(budget.month).slice(0, 7) : getSelectedBudgetMonth();
+      els.budgetLimitAmount.value = budget?.limit_amount || "";
+      els.budgetModalTitle.textContent = mode === "edit" ? "Изменить бюджет" : "Новый бюджет";
+      els.budgetModalBackdrop.classList.add("show");
+    }
+
+    function closeBudgetModal() {
+      els.budgetModalBackdrop.classList.remove("show");
+    }
+
+    async function openEditBudgetModal(budgetId) {
+      const budget = state.budgets.find((item) => Number(item.id) === Number(budgetId)) || await apiFetch(`/budgets/${budgetId}/`);
+      openBudgetModal("edit", budget);
+    }
+
+    async function deleteBudget(budgetId) {
+      const ok = await confirmAction("Удалить бюджет?", "Категорийный лимит будет удалён.");
+      if (!ok) return;
+      await apiFetch(`/budgets/${budgetId}/`, { method: "DELETE" });
+      haptic("medium");
+      showToast("Бюджет удалён");
+      await reloadBudgetsOnly();
+    }
+
+    async function submitBudgetForm(event) {
+      event.preventDefault();
+      els.budgetFormStatus.textContent = "Сохраняем...";
+      const id = els.budgetId.value;
+      const payload = {
+        category_id: els.budgetCategory.value,
+        month: `${els.budgetMonth.value}-01`,
+        limit_amount: els.budgetLimitAmount.value,
+      };
+      const path = id ? `/budgets/${id}/` : "/budgets/";
+      const method = id ? "PATCH" : "POST";
+      try {
+        await apiFetch(path, { method, body: JSON.stringify(payload) });
+        haptic("medium");
+        showToast(id ? "Бюджет обновлён" : "Бюджет создан");
+        closeBudgetModal();
+        await reloadBudgetsOnly();
+        await loadInsights();
+        renderInsights();
+      } catch (error) {
+        els.budgetFormStatus.textContent = error.message;
+      }
+    }
+
+    async function reloadBudgetsOnly() {
+      await loadBudgets();
+      renderDashboardBudgets();
+      renderBudgetsSummary();
+      renderBudgetsList();
+    }
+
+    async function reloadAllData() {
+      els.summaryStatus.innerHTML = '<div class="loader-line"></div>';
+      await Promise.all([
+        loadSummary(),
+        loadTransactions(),
+        loadAnalyticsOverview(),
+        loadAnalyticsSeries(),
+        loadInsights(),
+        loadForecast(),
+        loadBudgets(),
+        loadTemplates(),
+      ]);
+      renderSummary();
+      renderInsights();
+      renderForecast();
+      renderRecentTransactions();
+      renderTransactions();
+      renderDashboardAnalytics();
+      renderAnalyticsScreen();
+      renderDashboardBudgets();
+      renderBudgetsSummary();
+      renderBudgetsList();
+      renderProfile();
+      renderCategoryManager();
+      renderTemplatesManager();
+    }
+
+    function bindEvents() {
+      document.querySelectorAll(".nav-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          haptic("light");
+          setActiveScreen(btn.dataset.screen);
+        });
+      });
+
+      try {
+        tg?.BackButton?.onClick(() => setActiveScreen("dashboardScreen"));
+      } catch (_) {}
+
+      els.refreshBtn.addEventListener("click", async () => {
+        haptic("light");
+        await reloadAllData();
+        showToast("Данные обновлены");
+      });
+
+      els.applyFiltersBtn.addEventListener("click", async () => {
+        haptic("light");
+        await reloadAllData();
+        showToast("Фильтры применены");
+      });
+
+      els.resetFiltersBtn.addEventListener("click", async () => {
+        els.filterType.value = "";
+        els.filterCategory.value = "";
+        els.filterFrom.value = "";
+        els.filterTo.value = "";
+        els.filterSearch.value = "";
+        await reloadAllData();
+        showToast("Фильтры сброшены");
+      });
+
+      els.transactionsAddBtn.addEventListener("click", () => openTransactionModal("create", null, "expense"));
+      els.openAddIncomeBtn?.addEventListener("click", () => openTransactionModal("create", null, "income"));
+      els.openAddExpenseBtn?.addEventListener("click", () => openTransactionModal("create", null, "expense"));
+
+      els.quickAddPreviewBtn.addEventListener("click", handleQuickAddPreview);
+      els.quickAddCreateBtn.addEventListener("click", handleQuickAddCreate);
+      els.quickAddClearBtn.addEventListener("click", () => {
+        els.quickAddInput.value = "";
+        els.quickAddStatus.textContent = "";
+        resetQuickAddPreview();
+      });
+      els.quickAddInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          handleQuickAddPreview();
+        }
+      });
+
+      els.transactionType.addEventListener("change", fillTransactionCategorySelect);
+      els.closeTransactionModalBtn.addEventListener("click", closeTransactionModal);
+      els.cancelTransactionBtn.addEventListener("click", closeTransactionModal);
+      els.transactionModalBackdrop.addEventListener("click", (e) => {
+        if (e.target === els.transactionModalBackdrop) closeTransactionModal();
+      });
+      els.transactionForm.addEventListener("submit", submitTransactionForm);
+
+      els.applyBudgetMonthBtn.addEventListener("click", async () => {
+        await reloadBudgetsOnly();
+        showToast("Бюджеты обновлены");
+      });
+      els.openAddBudgetBtn.addEventListener("click", () => openBudgetModal("create", null));
+      els.closeBudgetModalBtn.addEventListener("click", closeBudgetModal);
+      els.cancelBudgetBtn.addEventListener("click", closeBudgetModal);
+      els.budgetModalBackdrop.addEventListener("click", (e) => {
+        if (e.target === els.budgetModalBackdrop) closeBudgetModal();
+      });
+      els.budgetForm.addEventListener("submit", submitBudgetForm);
+
+      els.openAddCategoryBtn.addEventListener("click", () => openCategoryModal("create"));
+      els.openAddTemplateBtn.addEventListener("click", () => openTemplateModal("create"));
+
+      els.categoryTypeFilters.querySelectorAll("[data-category-filter]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.categoriesFilter = btn.dataset.categoryFilter;
+          els.categoryTypeFilters.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+          renderCategoryManager();
+        });
+      });
+
+      els.templateTypeFilters.querySelectorAll("[data-template-filter]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.templatesFilter = btn.dataset.templateFilter;
+          els.templateTypeFilters.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+          renderTemplatesManager();
+        });
+      });
+
+      els.analyticsPeriodButtons.querySelectorAll("[data-period]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          applyAnalyticsPeriod(btn.dataset.period);
+          await reloadAllData();
+          showToast("Период аналитики обновлён");
+        });
+      });
+
+      els.templateType.addEventListener("change", fillTemplateCategorySelect);
+
+      els.closeCategoryModalBtn.addEventListener("click", closeCategoryModal);
+      els.cancelCategoryBtn.addEventListener("click", closeCategoryModal);
+      els.categoryModalBackdrop.addEventListener("click", (e) => {
+        if (e.target === els.categoryModalBackdrop) closeCategoryModal();
+      });
+      els.categoryForm.addEventListener("submit", submitCategoryForm);
+
+      els.closeTemplateModalBtn.addEventListener("click", closeTemplateModal);
+      els.cancelTemplateBtn.addEventListener("click", closeTemplateModal);
+      els.templateModalBackdrop.addEventListener("click", (e) => {
+        if (e.target === els.templateModalBackdrop) closeTemplateModal();
+      });
+      els.templateForm.addEventListener("submit", submitTemplateForm);
+    }
+
+    async function initMiniApp() {
+      els.budgetMonthFilter.value = toMonthString(new Date());
+      els.budgetMonth.value = toMonthString(new Date());
+      setActiveScreen("dashboardScreen");
+      bindEvents();
+      resetQuickAddPreview();
+      applyAnalyticsPeriod("month");
+
+      try {
+        await authenticateMiniApp();
+        await loadMe();
+        await loadCategories();
+        await reloadAllData();
+      } catch (error) {
+        console.error(error);
+        els.welcomeText.textContent = "Ошибка запуска Mini App";
+        els.summaryStatus.textContent = error.message;
+        showToast(error.message);
+      }
+    }
+
+    initMiniApp();
+  </script>
+</body>
+</html>
