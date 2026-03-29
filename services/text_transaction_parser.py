@@ -9,7 +9,7 @@ from typing import Optional
 
 @dataclass
 class ParsedQuickTransaction:
-    tx_type: str                  # "income" | "expense"
+    tx_type: str
     amount: Decimal
     note: str
     tx_date: date
@@ -23,31 +23,18 @@ class QuickParseError(ValueError):
 
 
 _DATE_WORDS = {"сегодня", "вчера", "позавчера"}
+
 _TIME_RE = re.compile(r"^(?P<hour>\d{1,2}):(?P<minute>\d{2})$")
 _DATE_RE = re.compile(r"^(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})$")
 _AMOUNT_RE = re.compile(r"^(?P<sign>[+-])\s*(?P<amount>\d+(?:[.,]\d{1,2})?)\s*(?P<tail>.*)$")
 
+_SIGN_ONLY_RE = re.compile(r"^[+-]\s*$")
+_SIGN_AND_NOT_AMOUNT_RE = re.compile(r"^[+-]\s*[^\d\s].*$")
+_SEEMS_LIKE_DATE_RE = re.compile(r"^\d{1,2}\.\d{1,2}\.\d{2,4}$")
+_SEEMS_LIKE_TIME_RE = re.compile(r"^\d{1,2}:\d{1,2}$")
+
 
 def parse_quick_transaction(text: str, now: Optional[datetime] = None) -> ParsedQuickTransaction:
-    """
-    Поддерживаемые форматы:
-    +100000 зарплата
-    +100000 зарплата вчера
-    +100000 зарплата вчера 21:21
-    +100000 зарплата 03.03.2026
-    +100000 зарплата 03.03.2026 21:21
-    -500 бензин сегодня
-    -500 бензин сегодня 08:30
-    -500 бензин 03.03.2026 19:15
-
-    Правила:
-    - '+' = income
-    - '-' = expense
-    - если дата не указана -> сегодня
-    - если время не указано -> 00:00
-    - дата и время ищутся только в конце строки
-    """
-
     if now is None:
         now = datetime.now()
 
@@ -60,10 +47,24 @@ def parse_quick_transaction(text: str, now: Optional[datetime] = None) -> Parsed
     if not text:
         raise QuickParseError("Пустое сообщение.")
 
+    if _SIGN_ONLY_RE.match(text):
+        raise QuickParseError(
+            "После знака <b>+</b> или <b>-</b> нужно указать сумму и описание.\n"
+            "Пример: <code>-500 бензин сегодня</code>"
+        )
+
+    if _SIGN_AND_NOT_AMOUNT_RE.match(text):
+        raise QuickParseError(
+            "После знака <b>+</b> или <b>-</b> сначала должна идти сумма.\n"
+            "Пример: <code>+100000 зарплата вчера 21:21</code>"
+        )
+
     match = _AMOUNT_RE.match(text)
     if not match:
         raise QuickParseError(
-            "Неверный формат. Пример: +100000 зарплата вчера 21:21"
+            "Неверный формат записи.\n"
+            "Сначала укажи <b>+</b> или <b>-</b>, потом сумму и описание.\n"
+            "Пример: <code>+100000 зарплата вчера 21:21</code>"
         )
 
     sign = match.group("sign")
@@ -80,33 +81,51 @@ def parse_quick_transaction(text: str, now: Optional[datetime] = None) -> Parsed
     if amount <= 0:
         raise QuickParseError("Сумма должна быть больше нуля.")
 
-    tokens = tail.split() if tail else []
+    if not tail:
+        op_word = "дохода" if tx_type == "income" else "расхода"
+        example = "+100000 зарплата" if tx_type == "income" else "-500 бензин сегодня"
+        raise QuickParseError(
+            f"Ты указал только сумму, но не написал описание {op_word}.\n"
+            f"Пример: <code>{example}</code>"
+        )
 
-    parsed_time = time(0, 0)
+    tokens = tail.split()
+
+    parsed_time = now.replace(second=0, microsecond=0).time()
     time_provided = False
     parsed_date = now.date()
 
-    # 1. Пробуем время в самом конце
     if tokens:
         maybe_time = tokens[-1].lower()
         if _looks_like_time(maybe_time):
             parsed_time = _parse_time_token(maybe_time)
             time_provided = True
             tokens.pop()
+        elif _seems_like_time(maybe_time):
+            raise QuickParseError(
+                f"Неверный формат времени: <code>{maybe_time}</code>\n"
+                "Используй формат <b>ЧЧ:ММ</b>, например <code>21:21</code>."
+            )
 
-    # 2. Пробуем дату перед временем или в конце
     if tokens:
         maybe_date = tokens[-1].lower()
         if maybe_date in _DATE_WORDS or _looks_like_date(maybe_date):
             parsed_date = _parse_date_token(maybe_date, now.date())
             tokens.pop()
+        elif _seems_like_date(maybe_date):
+            raise QuickParseError(
+                f"Неверный формат даты: <code>{maybe_date}</code>\n"
+                "Используй формат <b>ДД.ММ.ГГГГ</b>, например <code>03.03.2026</code>."
+            )
 
     note = " ".join(tokens).strip()
 
     if not note:
+        op_word = "дохода" if tx_type == "income" else "расхода"
+        example = "+100000 зарплата" if tx_type == "income" else "-500 бензин сегодня"
         raise QuickParseError(
-            "Не удалось распознать описание операции. "
-            "Пример: -500 бензин сегодня"
+            f"Не удалось распознать описание {op_word}.\n"
+            f"Пример: <code>{example}</code>"
         )
 
     return ParsedQuickTransaction(
@@ -128,6 +147,10 @@ def _looks_like_time(value: str) -> bool:
     return bool(_TIME_RE.match(value))
 
 
+def _seems_like_time(value: str) -> bool:
+    return bool(_SEEMS_LIKE_TIME_RE.match(value))
+
+
 def _parse_time_token(value: str) -> time:
     match = _TIME_RE.match(value)
     if not match:
@@ -146,6 +169,10 @@ def _parse_time_token(value: str) -> time:
 
 def _looks_like_date(value: str) -> bool:
     return bool(_DATE_RE.match(value))
+
+
+def _seems_like_date(value: str) -> bool:
+    return bool(_SEEMS_LIKE_DATE_RE.match(value))
 
 
 def _parse_date_token(value: str, today: date) -> date:

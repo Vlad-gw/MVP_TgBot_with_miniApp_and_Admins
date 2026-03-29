@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+import re
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
@@ -23,6 +26,57 @@ router = Router()
 
 FALLBACK_EXPENSE_CATEGORY = "Прочее"
 
+LIKELY_TRANSACTION_WITHOUT_SIGN_RE = re.compile(
+    r"^\s*\d+(?:[.,]\d{1,2})?(?:\s+\S.*)?$"
+)
+
+MENU_BUTTON_TEXTS = {
+    "💰 Баланс",
+    "📜 Последние операции",
+    "📥 Импорт выписки",
+    "📁 Экспорт в Excel",
+    "📱 Открыть Mini App",
+    "⚙️ Настройки",
+    "👤 Профиль",
+    "🔔 Напоминания",
+    "🔙 Назад",
+}
+
+
+def build_quick_add_help_text(error_text: str | None = None) -> str:
+    text = (
+        "Не удалось распознать запись.\n\n"
+        "Как вводить правильно:\n"
+        "• <code>+100000 зарплата вчера 21:21</code>\n"
+        "• <code>+100000 зп 03.03.2026</code>\n"
+        "• <code>-500 бензин сегодня</code>\n"
+        "• <code>-1200 кафе вчера 19:15</code>\n\n"
+        "Правила:\n"
+        "• <b>+</b> — доход\n"
+        "• <b>-</b> — расход\n"
+        "• сначала сумма, потом описание\n"
+        "• дата и время — необязательно\n"
+        "• без времени — текущее время\n"
+    )
+
+    if error_text:
+        text += f"\nОшибка: <b>{error_text}</b>"
+
+    return text
+
+
+def build_plain_text_hint() -> str:
+    return (
+        "Похоже, это не запись дохода или расхода.\n\n"
+        "Для быстрого добавления используй такой формат:\n"
+        "• <code>+100000 зарплата</code>\n"
+        "• <code>-500 бензин сегодня</code>\n"
+        "• <code>-1200 кафе вчера 19:15</code>\n\n"
+        "Где:\n"
+        "• <b>+</b> — доход\n"
+        "• <b>-</b> — расход"
+    )
+
 
 @router.message(F.text.startswith("+"))
 @router.message(F.text.startswith("-"))
@@ -37,15 +91,7 @@ async def quick_add_transaction(message: Message, state: FSMContext) -> None:
         parsed = parse_quick_transaction(text)
         tx_dt = combine_to_datetime(parsed)
     except QuickParseError as e:
-        await message.answer(
-            "Не удалось распознать запись.\n\n"
-            "Примеры:\n"
-            "<code>+100000 зарплата вчера 21:21</code>\n"
-            "<code>+100000 зп 03.03.2026</code>\n"
-            "<code>-500 бензин сегодня</code>\n"
-            "<code>-1200 кафе вчера 19:15</code>\n\n"
-            f"Ошибка: <b>{e}</b>"
-        )
+        await message.answer(build_quick_add_help_text(str(e)))
         return
 
     telegram_id = message.from_user.id
@@ -55,11 +101,8 @@ async def quick_add_transaction(message: Message, state: FSMContext) -> None:
         await message.answer("Сначала нажми /start, чтобы зарегистрироваться в системе.")
         return
 
-    time_status = "указано" if parsed.time_provided else "не указано"
+    time_status = "указано" if parsed.time_provided else "текущее"
 
-    # =========================
-    # ДОХОД — сохраняем сразу
-    # =========================
     if parsed.tx_type == "income":
         income_category_name = resolve_income_category(parsed.note)
 
@@ -97,9 +140,6 @@ async def quick_add_transaction(message: Message, state: FSMContext) -> None:
         )
         return
 
-    # =========================
-    # РАСХОД — сначала подтверждение
-    # =========================
     predicted_name = None
     conf = 0.0
 
@@ -170,6 +210,57 @@ async def quick_add_transaction(message: Message, state: FSMContext) -> None:
     )
 
 
+@router.message(F.text.regexp(LIKELY_TRANSACTION_WITHOUT_SIGN_RE.pattern))
+async def quick_add_without_sign_hint(message: Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state is not None:
+        return
+
+    text = (message.text or "").strip()
+
+    if text.startswith("/"):
+        return
+
+    if text in MENU_BUTTON_TEXTS:
+        return
+
+    await message.answer(
+        "Похоже, ты пытаешься быстро добавить операцию, но не указал тип.\n\n"
+        "Используй:\n"
+        "• <b>+</b> перед суммой для дохода\n"
+        "• <b>-</b> перед суммой для расхода\n\n"
+        "Примеры:\n"
+        "<code>+100000 зарплата</code>\n"
+        "<code>-500 бензин сегодня</code>"
+    )
+
+
+@router.message(F.text)
+async def quick_add_plain_text_fallback(message: Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state is not None:
+        return
+
+    text = (message.text or "").strip()
+
+    if not text:
+        return
+
+    if text.startswith("/"):
+        return
+
+    if text in MENU_BUTTON_TEXTS:
+        return
+
+    if text.startswith("+") or text.startswith("-"):
+        return
+
+    if LIKELY_TRANSACTION_WITHOUT_SIGN_RE.match(text):
+        return
+
+    await message.answer(build_plain_text_hint())
+
+
 @router.callback_query(F.data == "quick_expense_confirm", QuickExpenseState.confirming_ml_category)
 async def quick_expense_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
@@ -178,7 +269,7 @@ async def quick_expense_confirm(callback: CallbackQuery, state: FSMContext) -> N
         user_id=data["quick_expense_user_id"],
         category_id=data["quick_expense_category_id"],
         amount=data["quick_expense_amount"],
-        datetime_=__import__("datetime").datetime.fromisoformat(data["quick_expense_datetime"]),
+        datetime_=datetime.fromisoformat(data["quick_expense_datetime"]),
         type_="expense",
         note=data["quick_expense_note"],
         suggested_category_id=data["quick_expense_category_id"],
@@ -249,7 +340,7 @@ async def quick_expense_manual_category(callback: CallbackQuery, state: FSMConte
         user_id=user_id,
         category_id=category_id,
         amount=data["quick_expense_amount"],
-        datetime_=__import__("datetime").datetime.fromisoformat(data["quick_expense_datetime"]),
+        datetime_=datetime.fromisoformat(data["quick_expense_datetime"]),
         type_="expense",
         note=data["quick_expense_note"],
         suggested_category_id=suggested_category_id,

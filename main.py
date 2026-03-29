@@ -18,13 +18,13 @@ from services.reminder_scheduler import start_scheduler, shutdown_scheduler
 from handlers import admin
 from handlers import (
     start,
-    quick_add,
     balance,
     history,
     export,
     profile,
     import_statement,
     reminders,
+    quick_add,
 )
 
 # Загружаем .env один раз в точке входа
@@ -47,24 +47,38 @@ dp = Dispatcher(storage=MemoryStorage())
 
 
 def register_routers() -> None:
-    # Базовые
+    # =========================
+    # Команды / старт
+    # =========================
     dp.include_router(start.router)
 
-    # Быстрый текстовый ввод +1000 / -500
-    dp.include_router(quick_add.router)
-
-    # Основные функции облегчённого бота
+    # =========================
+    # Основные функции бота
+    # ВАЖНО: кнопочные / обычные текстовые обработчики
+    # должны идти РАНЬШЕ quick_add
+    # =========================
     dp.include_router(balance.router)
     dp.include_router(history.router)
     dp.include_router(import_statement.router)
     dp.include_router(export.router)
 
+    # =========================
     # Настройки
+    # =========================
     dp.include_router(profile.router)
     dp.include_router(reminders.router)
 
+    # =========================
     # Админка
+    # =========================
     dp.include_router(admin.router)
+
+    # =========================
+    # Быстрый текстовый ввод
+    # ДОЛЖЕН БЫТЬ ПОСЛЕДНИМ,
+    # потому что там есть широкий фильтр по тексту
+    # =========================
+    dp.include_router(quick_add.router)
 
 
 async def set_bot_commands() -> None:
