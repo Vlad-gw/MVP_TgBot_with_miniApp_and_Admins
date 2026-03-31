@@ -239,7 +239,7 @@
       margin-bottom: 12px;
     }
     .forecast-chart-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
       margin-bottom: 4px;
     }
@@ -251,7 +251,7 @@
     }
     .forecast-chart-wrap {
       position: relative;
-      height: 292px;
+      height: 288px;
       border-radius: 18px;
       border: 1px solid rgba(51,65,85,.95);
       background:
@@ -274,18 +274,36 @@
       padding: 24px;
       text-align: center;
     }
-    .forecast-chart-tap {
+    .forecast-chart-pill {
       position: absolute;
+      top: 12px;
       right: 12px;
-      bottom: 10px;
-      font-size: 11px;
-      color: rgba(219,234,254,.72);
-      background: rgba(15,23,42,.55);
-      border: 1px solid rgba(59,130,246,.18);
-      border-radius: 999px;
-      padding: 6px 10px;
-      backdrop-filter: blur(8px);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: rgba(11,18,32,.74);
+      border: 1px solid rgba(245,158,11,.28);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
       pointer-events: none;
+      max-width: min(240px, calc(100% - 24px));
+    }
+    .forecast-chart-pill-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: rgba(253,186,116,.95);
+    }
+    .forecast-chart-pill-value {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: #fff7ed;
+      white-space: nowrap;
     }
     .forecast-chart-empty {
       display: flex;
@@ -905,8 +923,7 @@
               <div class="forecast-chart-title">Динамика по месяцам</div>
               <div class="forecast-chart-subtitle">Показываем полные месяцы, текущий месяц и прогноз.</div>
             </div>
-            <div class="chip" id="forecastChartModeChip">История + прогноз</div>
-          </div>
+                      </div>
           <div class="forecast-chart-wrap" id="forecastChartWrap">
             <div class="forecast-chart-empty">Строим график...</div>
           </div>
@@ -1469,7 +1486,6 @@
       forecastMlHistoryChip: document.getElementById("forecastMlHistoryChip"),
       forecastMlInsight: document.getElementById("forecastMlInsight"),
       forecastChartWrap: document.getElementById("forecastChartWrap"),
-      forecastChartModeChip: document.getElementById("forecastChartModeChip"),
       forecastStatus: document.getElementById("forecastStatus"),
 
       analyticsText: document.getElementById("analyticsText"),
@@ -1651,18 +1667,10 @@
     function formatMonthLabel(month) {
       if (!month) return "—";
       const [y, m] = String(month).split("-");
-      const date = new Date(Number(y), Number(m) - 1, 1);
-      return new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" }).format(date);
-    }
-
-    function formatMonthShort(month) {
-      if (!month) return "—";
-      const [y, m] = String(month).split("-");
-      const date = new Date(Number(y), Number(m) - 1, 1);
-      return new Intl.DateTimeFormat("ru-RU", { month: "short" })
-        .format(date)
-        .replace('.', '')
-        .toLowerCase();
+      const monthIndex = Number(m) - 1;
+      const shortMonths = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+      if (!Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) return String(month);
+      return shortMonths[monthIndex];
     }
 
     function haptic(type = "light") {
@@ -1939,7 +1947,7 @@
       (history || []).forEach((item) => {
         const value = Number(item?.amount ?? item?.total ?? 0);
         result.push({
-          label: formatMonthShort(item?.month || ""),
+          label: formatMonthLabel(item?.month || ""),
           fullLabel: item?.month || "",
           value,
           kind: "history",
@@ -1948,7 +1956,7 @@
 
       if (currentMonth && Number(currentMonth.amount || 0) >= 0) {
         result.push({
-          label: formatMonthShort(currentMonth.month || ""),
+          label: formatMonthLabel(currentMonth.month || ""),
           fullLabel: `${currentMonth.month || ""} (текущий)`,
           value: Number(currentMonth.amount || 0),
           kind: "current",
@@ -1977,6 +1985,7 @@
       return gradient;
     }
 
+
     function renderForecastChart(history, currentMonth, forecast, usingMl) {
       if (!els.forecastChartWrap) return;
 
@@ -1986,9 +1995,13 @@
         return;
       }
 
+      const forecastValue = Number(forecast?.predicted_amount || 0);
       els.forecastChartWrap.innerHTML = `
         <canvas id="forecastChartCanvas" class="forecast-chart-canvas"></canvas>
-
+        <div class="forecast-chart-pill">
+          <div class="forecast-chart-pill-label">Прогноз</div>
+          <div class="forecast-chart-pill-value">${formatMoney(forecastValue)}</div>
+        </div>
       `;
 
       const canvas = document.getElementById("forecastChartCanvas");
@@ -2019,8 +2032,8 @@
         return undefined;
       };
 
-      const pointRadius = chartData.map((item) => item.kind === "forecast" ? 6.5 : item.kind === "current" ? 5.5 : 4.5);
-      const pointHoverRadius = chartData.map((item) => item.kind === "forecast" ? 8 : 7);
+      const pointRadius = chartData.map((item) => item.kind === "forecast" ? 7 : item.kind === "current" ? 6 : 4.5);
+      const pointHoverRadius = chartData.map((item) => item.kind === "forecast" ? 9 : 7.5);
       const pointBackgroundColor = chartData.map((item) => {
         if (item.kind === "forecast") return "#f59e0b";
         if (item.kind === "current") return "#7dd3fc";
@@ -2028,7 +2041,6 @@
       });
       const pointBorderColor = chartData.map((item) => {
         if (item.kind === "forecast") return "#fff7ed";
-        if (item.kind === "current") return "#dbeafe";
         return "#dbeafe";
       });
 
@@ -2044,10 +2056,11 @@
           ctx.fillStyle = "rgba(219,234,254,.95)";
           ctx.textAlign = "center";
 
-          const lastHistoryIndex = forecastIndex > 0 ? forecastIndex - 1 : meta.data.length - 1;
-          const indexesToDraw = [lastHistoryIndex, forecastIndex].filter((i) => i >= 0);
+          const indicesToDraw = [];
+          if (forecastIndex > 0) indicesToDraw.push(forecastIndex - 1);
+          if (currentIndex > -1 && currentIndex !== forecastIndex - 1) indicesToDraw.push(currentIndex);
 
-          indexesToDraw.forEach((index) => {
+          indicesToDraw.forEach((index) => {
             const point = meta.data[index];
             const item = chartData[index];
             if (!point || !item) return;
@@ -2060,7 +2073,8 @@
             if (point) {
               ctx.font = "700 11px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif";
               ctx.fillStyle = "rgba(255,247,237,.92)";
-              ctx.fillText("Прогноз", point.x, Math.max(point.y - 30, 14));
+              ctx.textAlign = "right";
+              ctx.fillText("Прогноз", Math.max(point.x - 8, 48), Math.max(point.y - 24, 16));
             }
           }
           ctx.restore();
@@ -2136,10 +2150,10 @@
           },
           interaction: {
             mode: "nearest",
-            intersect: true,
+            intersect: false,
           },
           layout: {
-            padding: { top: 22, right: 12, left: 6, bottom: 6 }
+            padding: { top: 22, right: 18, left: 10, bottom: 6 }
           },
           onClick(event, elements, chart) {
             const active = elements?.length ? elements : chart.getElementsAtEventForMode(event, "nearest", { intersect: false }, true);
@@ -2189,16 +2203,18 @@
                 drawBorder: false,
               },
               border: { display: false },
-              offset: true,
               ticks: {
-                autoSkip: false,
-                maxRotation: 0,
-                minRotation: 0,
-                padding: 10,
                 color: "rgba(191,219,254,.88)",
                 font: {
                   size: 10,
                   weight: 700,
+                },
+                padding: 8,
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: false,
+                callback(value, index) {
+                  return labels[index] || "";
                 }
               }
             },
@@ -2246,7 +2262,6 @@
         els.forecastMlR2Chip.textContent = "Режим: —";
         els.forecastMlHistoryChip.textContent = "Месяцев: —";
         els.forecastMlInsight.textContent = "Когда история расходов накопится, здесь появится понятное объяснение для пользователя.";
-        els.forecastChartModeChip.textContent = "История + прогноз";
         els.forecastChartWrap.innerHTML = '<div class="forecast-chart-empty">Для графика нужны хотя бы 2 месяца расходов.</div>';
       };
 
@@ -2267,7 +2282,6 @@
           els.forecastMlInsight.textContent = "Добавьте ещё историю расходов, и приложение сможет давать более точный и персональный прогноз.";
         }
         els.forecastStatus.textContent = data.detail || "Для прогноза нужны хотя бы 2 полных месяца расходов.";
-        els.forecastChartModeChip.textContent = "Недостаточно данных";
         renderForecastChart(data.history || [], data.current_month || null, data.forecast || {}, false);
         return;
       }
@@ -2329,7 +2343,6 @@
       }
       els.forecastMlInsight.textContent = insightText;
 
-      els.forecastChartModeChip.textContent = usingMl ? "История + умный прогноз" : "История + базовый расчёт";
       renderForecastChart(data.history || [], data.current_month || null, f, usingMl);
 
       let statusText = "Оценка строится по истории расходов.";
