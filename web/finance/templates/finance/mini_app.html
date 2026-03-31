@@ -251,7 +251,7 @@
     }
     .forecast-chart-wrap {
       position: relative;
-      height: 264px;
+      height: 292px;
       border-radius: 18px;
       border: 1px solid rgba(51,65,85,.95);
       background:
@@ -903,7 +903,7 @@
           <div class="forecast-chart-head">
             <div>
               <div class="forecast-chart-title">Динамика по месяцам</div>
-              <div class="forecast-chart-subtitle">Показываем полные месяцы, текущий месяц и прогноз. Нажми на точку, чтобы увидеть сумму.</div>
+              <div class="forecast-chart-subtitle">Показываем полные месяцы, текущий месяц и прогноз.</div>
             </div>
             <div class="chip" id="forecastChartModeChip">История + прогноз</div>
           </div>
@@ -1655,6 +1655,16 @@
       return new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" }).format(date);
     }
 
+    function formatMonthShort(month) {
+      if (!month) return "—";
+      const [y, m] = String(month).split("-");
+      const date = new Date(Number(y), Number(m) - 1, 1);
+      return new Intl.DateTimeFormat("ru-RU", { month: "short" })
+        .format(date)
+        .replace('.', '')
+        .toLowerCase();
+    }
+
     function haptic(type = "light") {
       try {
         tg?.HapticFeedback?.impactOccurred?.(type);
@@ -1929,7 +1939,7 @@
       (history || []).forEach((item) => {
         const value = Number(item?.amount ?? item?.total ?? 0);
         result.push({
-          label: formatMonthLabel(item?.month || ""),
+          label: formatMonthShort(item?.month || ""),
           fullLabel: item?.month || "",
           value,
           kind: "history",
@@ -1938,7 +1948,7 @@
 
       if (currentMonth && Number(currentMonth.amount || 0) >= 0) {
         result.push({
-          label: formatMonthLabel(currentMonth.month || ""),
+          label: formatMonthShort(currentMonth.month || ""),
           fullLabel: `${currentMonth.month || ""} (текущий)`,
           value: Number(currentMonth.amount || 0),
           kind: "current",
@@ -1978,7 +1988,7 @@
 
       els.forecastChartWrap.innerHTML = `
         <canvas id="forecastChartCanvas" class="forecast-chart-canvas"></canvas>
-        <div class="forecast-chart-tap">Нажми на точку</div>
+
       `;
 
       const canvas = document.getElementById("forecastChartCanvas");
@@ -2179,11 +2189,16 @@
                 drawBorder: false,
               },
               border: { display: false },
+              offset: true,
               ticks: {
+                autoSkip: false,
+                maxRotation: 0,
+                minRotation: 0,
+                padding: 10,
                 color: "rgba(191,219,254,.88)",
                 font: {
-                  size: 11,
-                  weight: 600,
+                  size: 10,
+                  weight: 700,
                 }
               }
             },
