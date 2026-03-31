@@ -6,7 +6,9 @@ import hmac
 import json
 import os
 import re
+import sys
 from datetime import date, datetime, time as dtime, timedelta
+from pathlib import Path
 
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -22,6 +24,12 @@ from rest_framework.response import Response
 from .auth import generate_api_key, get_user_from_request
 from .models import Budget, Category, Transaction, TransactionTemplate, User
 from .serializers import BudgetSerializer, CategorySerializer, TransactionSerializer, TransactionTemplateSerializer
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from services.ml_forecast import linear_regression_forecast
 
 
 # ============================================================================
@@ -574,6 +582,7 @@ def _expense_forecast_payload(user: User) -> dict:
     full_months = list(sorted(full_months))
 
     history = []
+    history_values: list[Decimal] = []
     for month_value in full_months:
         start_dt, end_dt = _month_bounds(month_value)
         total = (
@@ -585,17 +594,40 @@ def _expense_forecast_payload(user: User) -> dict:
             ).aggregate(s=Sum("amount"))["s"]
             or Decimal("0")
         )
-        history.append({"month": _month_label(month_value), "amount": _money_str(total)})
+        total_dec = _to_decimal(total)
+        history_values.append(total_dec)
+        history.append({"month": _month_label(month_value), "amount": _money_str(total_dec)})
 
-    non_zero_history = [_to_decimal(item["amount"]) for item in history if _to_decimal(item["amount"]) > 0]
+    non_zero_history = [value for value in history_values if value > 0]
     if len(non_zero_history) < 2:
         return {
             "ok": False,
             "detail": "Недостаточно данных для прогноза. Нужны минимум 2 полных месяца расходов.",
             "history": history,
+            "ml": {
+                "enabled": False,
+                "reason": "not_enough_data",
+            },
         }
 
-    point = _weighted_forecast(non_zero_history)
+    ml_res = linear_regression_forecast(non_zero_history)
+
+    confidence = "unknown"
+    if ml_res.r2 is None:
+        confidence = "unknown"
+    elif ml_res.r2 < Decimal("0.20"):
+        confidence = "low"
+    elif ml_res.r2 < Decimal("0.50"):
+        confidence = "medium"
+    else:
+        confidence = "high"
+
+    ml_point = _to_decimal(ml_res.predicted)
+    baseline_point = _weighted_forecast(non_zero_history)
+
+    use_ml = confidence in {"medium", "high"} and ml_point > 0
+    point = ml_point if use_ml else baseline_point
+
     low, high = _robust_interval(non_zero_history[-6:], point)
 
     last = non_zero_history[-1]
@@ -633,6 +665,20 @@ def _expense_forecast_payload(user: User) -> dict:
             "month": _month_label(last_month),
         }
 
+    forecast_method = "ml" if use_ml else "baseline"
+    forecast_method_title = "Умный прогноз" if use_ml else "Надёжный расчёт"
+
+    if use_ml:
+        method_description = (
+            "Прогноз построен по истории расходов и подтверждён на прошлых месяцах. "
+            "Используем умный расчёт, потому что качество оценки достаточное."
+        )
+    else:
+        method_description = (
+            "Умный прогноз проверен, но его уверенность пока низкая. "
+            "Поэтому сейчас используем более стабильный расчёт по прошлым месяцам."
+        )
+
     return {
         "ok": True,
         "history": history,
@@ -644,6 +690,20 @@ def _expense_forecast_payload(user: User) -> dict:
             "trend_percent": _money_str(trend_pct),
             "last_month_amount": _money_str(last),
             "previous_month_amount": _money_str(prev),
+            "method": forecast_method,
+        },
+        "ml": {
+            "enabled": True,
+            "used_for_result": use_ml,
+            "model_name": ml_res.model_name,
+            "r2": _money_str(ml_res.r2),
+            "slope": _money_str(ml_res.slope),
+            "intercept": _money_str(ml_res.intercept),
+            "confidence": confidence,
+            "history_months_used": len(non_zero_history),
+            "method_title": forecast_method_title,
+            "method_description": method_description,
+            "fallback_reason": "low_confidence" if not use_ml else None,
         },
         "top_category": top_category,
     }

@@ -762,6 +762,21 @@
           </div>
         </div>
 
+        <div class="forecast-item" style="margin-top: 12px;">
+          <div class="forecast-head">
+            <div>
+              <div class="forecast-title">Как рассчитан прогноз</div>
+              <div class="forecast-subtitle" id="forecastMlText">Подбираем самый понятный и надёжный способ расчёта...</div>
+            </div>
+            <div class="forecast-amount" id="forecastMlAmount">—</div>
+          </div>
+          <div class="forecast-meta">
+            <span class="chip chip-primary" id="forecastMlChip">ML</span>
+            <span class="chip" id="forecastMlR2Chip">Режим: —</span>
+            <span class="chip" id="forecastMlHistoryChip">Месяцев: —</span>
+          </div>
+        </div>
+
         <div class="status" id="forecastStatus"></div>
       </div>
 
@@ -1312,6 +1327,11 @@
       forecastTopCategoryAmount: document.getElementById("forecastTopCategoryAmount"),
       forecastTopCategoryChip: document.getElementById("forecastTopCategoryChip"),
       forecastHistoryChip: document.getElementById("forecastHistoryChip"),
+      forecastMlText: document.getElementById("forecastMlText"),
+      forecastMlAmount: document.getElementById("forecastMlAmount"),
+      forecastMlChip: document.getElementById("forecastMlChip"),
+      forecastMlR2Chip: document.getElementById("forecastMlR2Chip"),
+      forecastMlHistoryChip: document.getElementById("forecastMlHistoryChip"),
       forecastStatus: document.getElementById("forecastStatus"),
 
       analyticsText: document.getElementById("analyticsText"),
@@ -1767,6 +1787,16 @@
     function renderForecast() {
       const data = state.forecast;
       if (!data) return;
+
+      const resetMlBlock = () => {
+        els.forecastMlText.textContent = "Умный прогноз пока недоступен.";
+        els.forecastMlAmount.textContent = "—";
+        els.forecastMlChip.textContent = "ML";
+        els.forecastMlChip.className = "chip chip-primary";
+        els.forecastMlR2Chip.textContent = "Режим: —";
+        els.forecastMlHistoryChip.textContent = "Месяцев: —";
+      };
+
       if (!data.ok) {
         els.forecastExpected.textContent = "—";
         els.forecastLow.textContent = "—";
@@ -1777,11 +1807,17 @@
         els.forecastTopCategoryAmount.textContent = "—";
         els.forecastTopCategoryChip.textContent = "Нет данных";
         els.forecastHistoryChip.textContent = `История: ${data.history?.length || 0} мес.`;
+        resetMlBlock();
+        if (data.ml && data.ml.reason === "not_enough_data") {
+          els.forecastMlText.textContent = "Для умного прогноза нужны хотя бы 2 полных месяца с расходами.";
+          els.forecastMlHistoryChip.textContent = `Месяцев: ${data.history?.length || 0}`;
+        }
         els.forecastStatus.textContent = data.detail || "Для прогноза нужны хотя бы 2 полных месяца расходов.";
         return;
       }
 
       const f = data.forecast || {};
+      const ml = data.ml || {};
       els.forecastExpected.textContent = formatMoney(f.predicted_amount);
       els.forecastLow.textContent = formatMoney(f.low_amount);
       els.forecastHigh.textContent = formatMoney(f.high_amount);
@@ -1803,8 +1839,37 @@
         els.forecastTopCategoryChip.textContent = "Нет данных";
       }
       els.forecastHistoryChip.textContent = `История: ${data.history.length} мес.`;
-      els.forecastStatus.textContent = `Оценка строится по истории расходов и устойчива к разовым всплескам.`;
+
+      const confidenceMap = {
+        high: ["Высокая надёжность", "chip-ok"],
+        medium: ["Хорошая надёжность", "chip-warning"],
+        low: ["Пока ненадёжно", "chip-danger"],
+        unknown: ["Оценка уточняется", "chip-primary"],
+      };
+      const [confidenceText, confidenceClass] = confidenceMap[ml.confidence] || confidenceMap.unknown;
+      const usingMl = !!ml.used_for_result;
+      const methodLabel = usingMl ? "Умный прогноз" : "Базовый расчёт";
+
+      els.forecastMlAmount.textContent = ml.method_title || methodLabel;
+      els.forecastMlText.textContent = ml.enabled
+        ? (ml.method_description || "Прогноз рассчитан по истории расходов.")
+        : "Умный прогноз пока недоступен.";
+      els.forecastMlChip.textContent = confidenceText;
+      els.forecastMlChip.className = `chip ${confidenceClass}`;
+      els.forecastMlR2Chip.textContent = `Режим: ${methodLabel}`;
+      els.forecastMlHistoryChip.textContent = `Месяцев: ${ml.history_months_used || data.history.length || 0}`;
+
+      let statusText = `Оценка строится по истории расходов.`;
+      if (ml.enabled) {
+        if (usingMl) {
+          statusText += ` Сейчас используется умный прогноз, потому что его качество по прошлым месяцам достаточно хорошее.`;
+        } else {
+          statusText += ` Умный прогноз мы проверили, но его качество пока низкое, поэтому для итоговой суммы используется базовый расчёт.`;
+        }
+      }
+      els.forecastStatus.textContent = statusText;
     }
+
 
     function renderRecentTransactions() {
       const list = state.transactions.slice(0, 5);
