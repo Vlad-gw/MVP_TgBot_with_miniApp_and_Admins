@@ -611,23 +611,13 @@ def _expense_forecast_payload(user: User) -> dict:
         }
 
     ml_res = linear_regression_forecast(non_zero_history)
-
-    confidence = "unknown"
-    if ml_res.r2 is None:
-        confidence = "unknown"
-    elif ml_res.r2 < Decimal("0.20"):
-        confidence = "low"
-    elif ml_res.r2 < Decimal("0.50"):
-        confidence = "medium"
-    else:
-        confidence = "high"
-
     ml_point = _to_decimal(ml_res.predicted)
     baseline_point = _weighted_forecast(non_zero_history)
 
-    use_ml = confidence in {"medium", "high"} and ml_point > 0
-    point = ml_point if use_ml else baseline_point
+    if ml_point <= 0:
+        ml_point = Decimal("0")
 
+    point = ml_point if ml_point > 0 else baseline_point
     low, high = _robust_interval(non_zero_history[-6:], point)
 
     last = non_zero_history[-1]
@@ -665,19 +655,62 @@ def _expense_forecast_payload(user: User) -> dict:
             "month": _month_label(last_month),
         }
 
+    confidence = "unknown"
+    if ml_res.r2 is None:
+        confidence = "unknown"
+    elif ml_res.r2 < Decimal("0.20"):
+        confidence = "low"
+    elif ml_res.r2 < Decimal("0.50"):
+        confidence = "medium"
+    else:
+        confidence = "high"
+
+    use_ml = confidence in {"medium", "high"} and ml_point > 0
+    point = ml_point if use_ml else baseline_point
+    low, high = _robust_interval(non_zero_history[-6:], point)
+
+    if trend_pct is None:
+        trend_direction = "unknown"
+    elif trend_pct > Decimal("10"):
+        trend_direction = "up_fast"
+    elif trend_pct > Decimal("3"):
+        trend_direction = "up"
+    elif trend_pct < Decimal("-10"):
+        trend_direction = "down_fast"
+    elif trend_pct < Decimal("-3"):
+        trend_direction = "down"
+    else:
+        trend_direction = "stable"
+
     forecast_method = "ml" if use_ml else "baseline"
     forecast_method_title = "Умный прогноз" if use_ml else "Надёжный расчёт"
 
     if use_ml:
         method_description = (
-            "Прогноз построен по истории расходов и подтверждён на прошлых месяцах. "
-            "Используем умный расчёт, потому что качество оценки достаточное."
+            "Прогноз рассчитан по вашей истории расходов. Последние месяцы ведут себя достаточно "
+            "стабильно, поэтому здесь используется более точный умный расчёт."
         )
+        if trend_direction in {"up_fast", "up"}:
+            method_tip = "Есть признаки роста расходов. Лучше заранее оставить запас в бюджете."
+        elif trend_direction in {"down_fast", "down"}:
+            method_tip = "Расходы снижаются. Есть шанс уложиться в меньшую сумму, чем обычно."
+        else:
+            method_tip = "Траты выглядят достаточно ровными. На такой прогноз можно ориентироваться при планировании."
     else:
         method_description = (
-            "Умный прогноз проверен, но его уверенность пока низкая. "
-            "Поэтому сейчас используем более стабильный расчёт по прошлым месяцам."
+            "Умный прогноз был проверен, но его уверенность пока недостаточна. Поэтому итоговая сумма "
+            "сейчас считается надёжным базовым способом — по предыдущим месяцам."
         )
+        method_tip = "Когда накопится больше стабильной истории расходов, прогноз станет точнее."
+
+    if trend_direction in {"up_fast", "up"}:
+        trend_user_note = "Расходы растут относительно прошлого месяца."
+    elif trend_direction in {"down_fast", "down"}:
+        trend_user_note = "Расходы снижаются относительно прошлого месяца."
+    elif trend_direction == "stable":
+        trend_user_note = "Расходы остаются примерно на одном уровне."
+    else:
+        trend_user_note = "Пока недостаточно данных, чтобы уверенно оценить динамику."
 
     return {
         "ok": True,
@@ -691,6 +724,8 @@ def _expense_forecast_payload(user: User) -> dict:
             "last_month_amount": _money_str(last),
             "previous_month_amount": _money_str(prev),
             "method": forecast_method,
+            "trend_direction": trend_direction,
+            "trend_user_note": trend_user_note,
         },
         "ml": {
             "enabled": True,
@@ -703,6 +738,7 @@ def _expense_forecast_payload(user: User) -> dict:
             "history_months_used": len(non_zero_history),
             "method_title": forecast_method_title,
             "method_description": method_description,
+            "method_tip": method_tip,
             "fallback_reason": "low_confidence" if not use_ml else None,
         },
         "top_category": top_category,

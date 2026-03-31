@@ -200,6 +200,24 @@
     }
     .insight-title { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
     .insight-text { color: #dbeafe; font-size: 13px; line-height: 1.45; }
+    .forecast-insight {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .forecast-insight-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #dbeafe;
+      margin-bottom: 6px;
+    }
+    .forecast-insight-text {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
 
     .list { display: flex; flex-direction: column; gap: 10px; }
     .tx-item, .budget-item, .forecast-item {
@@ -765,8 +783,8 @@
         <div class="forecast-item" style="margin-top: 12px;">
           <div class="forecast-head">
             <div>
-              <div class="forecast-title">Как рассчитан прогноз</div>
-              <div class="forecast-subtitle" id="forecastMlText">Подбираем самый понятный и надёжный способ расчёта...</div>
+              <div class="forecast-title">ML-модель</div>
+              <div class="forecast-subtitle" id="forecastMlText">Загрузка параметров модели...</div>
             </div>
             <div class="forecast-amount" id="forecastMlAmount">—</div>
           </div>
@@ -774,6 +792,10 @@
             <span class="chip chip-primary" id="forecastMlChip">ML</span>
             <span class="chip" id="forecastMlR2Chip">Режим: —</span>
             <span class="chip" id="forecastMlHistoryChip">Месяцев: —</span>
+          </div>
+          <div class="forecast-insight">
+            <div class="forecast-insight-title">Что это значит</div>
+            <div class="forecast-insight-text" id="forecastMlInsight">Собираем пояснение...</div>
           </div>
         </div>
 
@@ -1332,6 +1354,7 @@
       forecastMlChip: document.getElementById("forecastMlChip"),
       forecastMlR2Chip: document.getElementById("forecastMlR2Chip"),
       forecastMlHistoryChip: document.getElementById("forecastMlHistoryChip"),
+      forecastMlInsight: document.getElementById("forecastMlInsight"),
       forecastStatus: document.getElementById("forecastStatus"),
 
       analyticsText: document.getElementById("analyticsText"),
@@ -1789,12 +1812,13 @@
       if (!data) return;
 
       const resetMlBlock = () => {
-        els.forecastMlText.textContent = "Умный прогноз пока недоступен.";
+        els.forecastMlText.textContent = "Подбираем самый понятный и надёжный способ расчёта...";
         els.forecastMlAmount.textContent = "—";
         els.forecastMlChip.textContent = "ML";
         els.forecastMlChip.className = "chip chip-primary";
         els.forecastMlR2Chip.textContent = "Режим: —";
         els.forecastMlHistoryChip.textContent = "Месяцев: —";
+        els.forecastMlInsight.textContent = "Когда история расходов накопится, здесь появится понятное объяснение для пользователя.";
       };
 
       if (!data.ok) {
@@ -1811,6 +1835,7 @@
         if (data.ml && data.ml.reason === "not_enough_data") {
           els.forecastMlText.textContent = "Для умного прогноза нужны хотя бы 2 полных месяца с расходами.";
           els.forecastMlHistoryChip.textContent = `Месяцев: ${data.history?.length || 0}`;
+          els.forecastMlInsight.textContent = "Добавьте ещё историю расходов, и приложение сможет давать более точный и персональный прогноз.";
         }
         els.forecastStatus.textContent = data.detail || "Для прогноза нужны хотя бы 2 полных месяца расходов.";
         return;
@@ -1848,7 +1873,7 @@
       };
       const [confidenceText, confidenceClass] = confidenceMap[ml.confidence] || confidenceMap.unknown;
       const usingMl = !!ml.used_for_result;
-      const methodLabel = usingMl ? "Умный прогноз" : "Базовый расчёт";
+      const methodLabel = usingMl ? "Умный прогноз" : "Надёжный расчёт";
 
       els.forecastMlAmount.textContent = ml.method_title || methodLabel;
       els.forecastMlText.textContent = ml.enabled
@@ -1859,13 +1884,30 @@
       els.forecastMlR2Chip.textContent = `Режим: ${methodLabel}`;
       els.forecastMlHistoryChip.textContent = `Месяцев: ${ml.history_months_used || data.history.length || 0}`;
 
-      let statusText = `Оценка строится по истории расходов.`;
+      let insightText = ml.method_tip || "Здесь будет короткое объяснение, как лучше воспринимать прогноз.";
+      if (f.trend_direction === "up_fast") {
+        insightText = "⚠️ Расходы растут заметно быстрее обычного. На следующий месяц лучше заложить дополнительный запас.";
+      } else if (f.trend_direction === "up") {
+        insightText = "💡 Расходы немного растут. Стоит держать бюджет под контролем и избегать лишних трат.";
+      } else if (f.trend_direction === "down_fast" || f.trend_direction === "down") {
+        insightText = "✅ Расходы снижаются. Это хороший сигнал: вероятно, в следующем месяце удержать бюджет будет проще.";
+      } else if (f.trend_direction === "stable") {
+        insightText = usingMl
+          ? "💡 Траты выглядят достаточно стабильными. На этот прогноз можно спокойно ориентироваться при планировании."
+          : "💡 Расходы пока без резких скачков. Базовый расчёт подойдёт как безопасный ориентир.";
+      }
+      els.forecastMlInsight.textContent = insightText;
+
+      let statusText = "Оценка строится по истории расходов.";
       if (ml.enabled) {
         if (usingMl) {
-          statusText += ` Сейчас используется умный прогноз, потому что его качество по прошлым месяцам достаточно хорошее.`;
+          statusText += " Сейчас используется умный прогноз, потому что его качество по прошлым месяцам достаточно хорошее.";
         } else {
-          statusText += ` Умный прогноз мы проверили, но его качество пока низкое, поэтому для итоговой суммы используется базовый расчёт.`;
+          statusText += " Умный прогноз мы проверили, но его качество пока низкое, поэтому для итоговой суммы используется базовый расчёт.";
         }
+      }
+      if (f.trend_user_note) {
+        statusText += ` ${f.trend_user_note}`;
       }
       els.forecastStatus.textContent = statusText;
     }
