@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Финансовый помощник</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -217,6 +218,104 @@
       color: var(--muted);
       font-size: 14px;
       line-height: 1.5;
+    }
+
+
+    .forecast-chart-card {
+      margin-top: 14px;
+      border: 1px solid rgba(59,130,246,.18);
+      border-radius: 22px;
+      padding: 16px;
+      background:
+        radial-gradient(circle at top right, rgba(59,130,246,.12), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    .forecast-chart-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .forecast-chart-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .forecast-chart-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 440px;
+    }
+    .forecast-chart-wrap {
+      position: relative;
+      height: 264px;
+      border-radius: 18px;
+      border: 1px solid rgba(51,65,85,.95);
+      background:
+        radial-gradient(circle at top center, rgba(37,99,235,.16), transparent 35%),
+        linear-gradient(180deg, rgba(8,15,32,.96), rgba(11,20,42,.72));
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    .forecast-chart-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .forecast-chart-empty {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 24px;
+      text-align: center;
+    }
+    .forecast-chart-tap {
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      font-size: 11px;
+      color: rgba(219,234,254,.72);
+      background: rgba(15,23,42,.55);
+      border: 1px solid rgba(59,130,246,.18);
+      border-radius: 999px;
+      padding: 6px 10px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+    .forecast-chart-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 16px;
+    }
+    .forecast-chart-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .forecast-chart-label {
+      font-size: 11px;
+      fill: #8ea5c5;
+    }
+    .forecast-chart-value {
+      font-size: 11px;
+      fill: #dbeafe;
+      font-weight: 700;
+    }
+    .forecast-chart-note {
+      font-size: 10px;
+      fill: #f8fafc;
+      font-weight: 800;
+      letter-spacing: .02em;
     }
 
     .list { display: flex; flex-direction: column; gap: 10px; }
@@ -799,6 +898,20 @@
           </div>
         </div>
 
+
+        <div class="forecast-chart-card">
+          <div class="forecast-chart-head">
+            <div>
+              <div class="forecast-chart-title">Динамика по месяцам</div>
+              <div class="forecast-chart-subtitle">Показываем полные месяцы, текущий месяц и прогноз. Нажми на точку, чтобы увидеть сумму.</div>
+            </div>
+            <div class="chip" id="forecastChartModeChip">История + прогноз</div>
+          </div>
+          <div class="forecast-chart-wrap" id="forecastChartWrap">
+            <div class="forecast-chart-empty">Строим график...</div>
+          </div>
+        </div>
+
         <div class="status" id="forecastStatus"></div>
       </div>
 
@@ -1355,6 +1468,8 @@
       forecastMlR2Chip: document.getElementById("forecastMlR2Chip"),
       forecastMlHistoryChip: document.getElementById("forecastMlHistoryChip"),
       forecastMlInsight: document.getElementById("forecastMlInsight"),
+      forecastChartWrap: document.getElementById("forecastChartWrap"),
+      forecastChartModeChip: document.getElementById("forecastChartModeChip"),
       forecastStatus: document.getElementById("forecastStatus"),
 
       analyticsText: document.getElementById("analyticsText"),
@@ -1807,6 +1922,303 @@
       els.insightText.textContent = message;
     }
 
+
+    function buildForecastChartData(history, currentMonth, forecast) {
+      const result = [];
+
+      (history || []).forEach((item) => {
+        const value = Number(item?.amount ?? item?.total ?? 0);
+        result.push({
+          label: formatMonthLabel(item?.month || ""),
+          fullLabel: item?.month || "",
+          value,
+          kind: "history",
+        });
+      });
+
+      if (currentMonth && Number(currentMonth.amount || 0) >= 0) {
+        result.push({
+          label: formatMonthLabel(currentMonth.month || ""),
+          fullLabel: `${currentMonth.month || ""} (текущий)`,
+          value: Number(currentMonth.amount || 0),
+          kind: "current",
+        });
+      }
+
+      if (forecast && forecast.next_month) {
+        result.push({
+          label: "Прогноз",
+          fullLabel: `Прогноз на ${forecast.next_month}`,
+          value: Number(forecast.predicted_amount || 0),
+          low: Number(forecast.low_amount || 0),
+          high: Number(forecast.high_amount || 0),
+          kind: "forecast",
+        });
+      }
+
+      return result;
+    }
+
+    function createForecastGradient(ctx, area) {
+      const gradient = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+      gradient.addColorStop(0, "rgba(96,165,250,0.34)");
+      gradient.addColorStop(0.65, "rgba(37,99,235,0.12)");
+      gradient.addColorStop(1, "rgba(15,23,42,0.02)");
+      return gradient;
+    }
+
+    function renderForecastChart(history, currentMonth, forecast, usingMl) {
+      if (!els.forecastChartWrap) return;
+
+      const chartData = buildForecastChartData(history, currentMonth, forecast);
+      if (chartData.length < 3) {
+        els.forecastChartWrap.innerHTML = '<div class="forecast-chart-empty">Для графика нужны хотя бы 2 месяца расходов.</div>';
+        return;
+      }
+
+      els.forecastChartWrap.innerHTML = `
+        <canvas id="forecastChartCanvas" class="forecast-chart-canvas"></canvas>
+        <div class="forecast-chart-tap">Нажми на точку</div>
+      `;
+
+      const canvas = document.getElementById("forecastChartCanvas");
+      if (!canvas || typeof Chart === "undefined") {
+        els.forecastChartWrap.innerHTML = '<div class="forecast-chart-empty">Не удалось загрузить график.</div>';
+        return;
+      }
+
+      if (window.__forecastChartInstance) {
+        window.__forecastChartInstance.destroy();
+      }
+
+      const labels = chartData.map((item) => item.label);
+      const values = chartData.map((item) => item.value);
+      const forecastIndex = chartData.findIndex((item) => item.kind === "forecast");
+      const currentIndex = chartData.findIndex((item) => item.kind === "current");
+
+      const segmentColor = (ctx) => {
+        const i = ctx.p0DataIndex;
+        if (forecastIndex > 0 && i >= forecastIndex - 1) return "#f59e0b";
+        if (currentIndex > 0 && i === currentIndex - 1) return "rgba(125,211,252,.95)";
+        return "#60a5fa";
+      };
+
+      const segmentDash = (ctx) => {
+        const i = ctx.p0DataIndex;
+        if (forecastIndex > 0 && i >= forecastIndex - 1) return [8, 6];
+        return undefined;
+      };
+
+      const pointRadius = chartData.map((item) => item.kind === "forecast" ? 6.5 : item.kind === "current" ? 5.5 : 4.5);
+      const pointHoverRadius = chartData.map((item) => item.kind === "forecast" ? 8 : 7);
+      const pointBackgroundColor = chartData.map((item) => {
+        if (item.kind === "forecast") return "#f59e0b";
+        if (item.kind === "current") return "#7dd3fc";
+        return "#60a5fa";
+      });
+      const pointBorderColor = chartData.map((item) => {
+        if (item.kind === "forecast") return "#fff7ed";
+        if (item.kind === "current") return "#dbeafe";
+        return "#dbeafe";
+      });
+
+      const valueLabelPlugin = {
+        id: "forecastValueLabelPlugin",
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          const meta = chart.getDatasetMeta(0);
+          if (!meta?.data?.length) return;
+
+          ctx.save();
+          ctx.font = "700 12px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif";
+          ctx.fillStyle = "rgba(219,234,254,.95)";
+          ctx.textAlign = "center";
+
+          const lastHistoryIndex = forecastIndex > 0 ? forecastIndex - 1 : meta.data.length - 1;
+          const indexesToDraw = [lastHistoryIndex, forecastIndex].filter((i) => i >= 0);
+
+          indexesToDraw.forEach((index) => {
+            const point = meta.data[index];
+            const item = chartData[index];
+            if (!point || !item) return;
+            const y = Math.max(point.y - 14, 18);
+            ctx.fillText(compactMoney(item.value) + " ₽", point.x, y);
+          });
+
+          if (forecastIndex > -1) {
+            const point = meta.data[forecastIndex];
+            if (point) {
+              ctx.font = "700 11px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif";
+              ctx.fillStyle = "rgba(255,247,237,.92)";
+              ctx.fillText("Прогноз", point.x, Math.max(point.y - 30, 14));
+            }
+          }
+          ctx.restore();
+        }
+      };
+
+      const forecastRangePlugin = {
+        id: "forecastRangePlugin",
+        afterDatasetsDraw(chart) {
+          if (forecastIndex < 0) return;
+          const item = chartData[forecastIndex];
+          if (!item || !Number.isFinite(item.low) || !Number.isFinite(item.high)) return;
+
+          const { ctx, scales } = chart;
+          const x = chart.getDatasetMeta(0).data[forecastIndex]?.x;
+          if (!x) return;
+
+          const yLow = scales.y.getPixelForValue(item.low);
+          const yHigh = scales.y.getPixelForValue(item.high);
+
+          ctx.save();
+          ctx.strokeStyle = "rgba(245,158,11,.95)";
+          ctx.lineWidth = 2;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(x, yHigh);
+          ctx.lineTo(x, yLow);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(x - 7, yHigh);
+          ctx.lineTo(x + 7, yHigh);
+          ctx.moveTo(x - 7, yLow);
+          ctx.lineTo(x + 7, yLow);
+          ctx.stroke();
+          ctx.restore();
+        }
+      };
+
+      window.__forecastChartInstance = new Chart(canvas, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            fill: true,
+            tension: 0.42,
+            borderWidth: 4,
+            pointRadius,
+            pointHoverRadius,
+            pointBackgroundColor,
+            pointBorderColor,
+            pointBorderWidth: 2.2,
+            segment: {
+              borderColor: (ctx) => segmentColor(ctx),
+              borderDash: (ctx) => segmentDash(ctx),
+            },
+            borderColor: "#60a5fa",
+            backgroundColor: (context) => {
+              const { chart } = context;
+              const { ctx, chartArea } = chart;
+              if (!chartArea) return "rgba(96,165,250,.18)";
+              return createForecastGradient(ctx, chartArea);
+            },
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 650,
+            easing: "easeOutCubic",
+          },
+          interaction: {
+            mode: "nearest",
+            intersect: true,
+          },
+          layout: {
+            padding: { top: 22, right: 12, left: 6, bottom: 6 }
+          },
+          onClick(event, elements, chart) {
+            const active = elements?.length ? elements : chart.getElementsAtEventForMode(event, "nearest", { intersect: false }, true);
+            if (!active?.length) return;
+            chart.setActiveElements(active);
+            chart.tooltip.setActiveElements(active, {
+              x: active[0].element.x,
+              y: active[0].element.y,
+            });
+            chart.update();
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: true,
+              displayColors: false,
+              backgroundColor: "rgba(15,23,42,.96)",
+              borderColor: "rgba(59,130,246,.28)",
+              borderWidth: 1,
+              padding: 12,
+              titleColor: "#f8fafc",
+              bodyColor: "#dbeafe",
+              cornerRadius: 14,
+              callbacks: {
+                title(items) {
+                  const index = items?.[0]?.dataIndex ?? 0;
+                  return chartData[index]?.fullLabel || "";
+                },
+                label(context) {
+                  const item = chartData[context.dataIndex];
+                  const rows = [`Сумма: ${formatMoney(item.value)}`];
+                  if (item.kind === "forecast" && Number.isFinite(item.low) && Number.isFinite(item.high)) {
+                    rows.push(`Диапазон: ${formatMoney(item.low)} — ${formatMoney(item.high)}`);
+                  }
+                  if (item.kind === "current") {
+                    rows.push("Текущий месяц, сумма пока не окончательная.");
+                  }
+                  return rows;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false,
+                drawBorder: false,
+              },
+              border: { display: false },
+              ticks: {
+                color: "rgba(191,219,254,.88)",
+                font: {
+                  size: 11,
+                  weight: 600,
+                }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grace: "8%",
+              grid: {
+                color: "rgba(148,163,184,.12)",
+                drawBorder: false,
+              },
+              border: { display: false },
+              ticks: {
+                color: "rgba(191,219,254,.72)",
+                font: {
+                  size: 11,
+                  weight: 600,
+                },
+                callback(value) {
+                  return compactMoney(Number(value)) + " ₽";
+                }
+              }
+            }
+          }
+        },
+        plugins: [valueLabelPlugin, forecastRangePlugin]
+      });
+    }
+
+    function compactMoney(value) {
+      const num = Number(value || 0);
+      if (num >= 1000000) return `${formatNumber(num / 1000000)}м`;
+      if (num >= 1000) return `${formatNumber(num / 1000)}к`;
+      return formatNumber(num);
+    }
+
     function renderForecast() {
       const data = state.forecast;
       if (!data) return;
@@ -1819,6 +2231,8 @@
         els.forecastMlR2Chip.textContent = "Режим: —";
         els.forecastMlHistoryChip.textContent = "Месяцев: —";
         els.forecastMlInsight.textContent = "Когда история расходов накопится, здесь появится понятное объяснение для пользователя.";
+        els.forecastChartModeChip.textContent = "История + прогноз";
+        els.forecastChartWrap.innerHTML = '<div class="forecast-chart-empty">Для графика нужны хотя бы 2 месяца расходов.</div>';
       };
 
       if (!data.ok) {
@@ -1838,6 +2252,8 @@
           els.forecastMlInsight.textContent = "Добавьте ещё историю расходов, и приложение сможет давать более точный и персональный прогноз.";
         }
         els.forecastStatus.textContent = data.detail || "Для прогноза нужны хотя бы 2 полных месяца расходов.";
+        els.forecastChartModeChip.textContent = "Недостаточно данных";
+        renderForecastChart(data.history || [], data.current_month || null, data.forecast || {}, false);
         return;
       }
 
@@ -1897,6 +2313,9 @@
           : "💡 Расходы пока без резких скачков. Базовый расчёт подойдёт как безопасный ориентир.";
       }
       els.forecastMlInsight.textContent = insightText;
+
+      els.forecastChartModeChip.textContent = usingMl ? "История + умный прогноз" : "История + базовый расчёт";
+      renderForecastChart(data.history || [], data.current_month || null, f, usingMl);
 
       let statusText = "Оценка строится по истории расходов.";
       if (ml.enabled) {

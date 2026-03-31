@@ -596,7 +596,28 @@ def _expense_forecast_payload(user: User) -> dict:
         )
         total_dec = _to_decimal(total)
         history_values.append(total_dec)
-        history.append({"month": _month_label(month_value), "amount": _money_str(total_dec)})
+        history.append({
+            "month": _month_label(month_value),
+            "amount": _money_str(total_dec),
+            "is_partial": False,
+        })
+
+    current_start_dt, current_end_dt = _month_bounds(current_month)
+    current_total = (
+        Transaction.objects.filter(
+            user=user,
+            type="expense",
+            date__gte=current_start_dt,
+            date__lt=current_end_dt,
+        ).aggregate(s=Sum("amount"))["s"]
+        or Decimal("0")
+    )
+    current_total_dec = _to_decimal(current_total)
+    current_month_payload = {
+        "month": _month_label(current_month),
+        "amount": _money_str(current_total_dec),
+        "is_partial": True,
+    }
 
     non_zero_history = [value for value in history_values if value > 0]
     if len(non_zero_history) < 2:
@@ -604,6 +625,7 @@ def _expense_forecast_payload(user: User) -> dict:
             "ok": False,
             "detail": "Недостаточно данных для прогноза. Нужны минимум 2 полных месяца расходов.",
             "history": history,
+            "current_month": current_month_payload,
             "ml": {
                 "enabled": False,
                 "reason": "not_enough_data",
@@ -616,9 +638,6 @@ def _expense_forecast_payload(user: User) -> dict:
 
     if ml_point <= 0:
         ml_point = Decimal("0")
-
-    point = ml_point if ml_point > 0 else baseline_point
-    low, high = _robust_interval(non_zero_history[-6:], point)
 
     last = non_zero_history[-1]
     prev = non_zero_history[-2]
@@ -715,6 +734,7 @@ def _expense_forecast_payload(user: User) -> dict:
     return {
         "ok": True,
         "history": history,
+        "current_month": current_month_payload,
         "forecast": {
             "next_month": _month_label(_add_months(current_month, 1)),
             "predicted_amount": _money_str(point),
@@ -743,7 +763,6 @@ def _expense_forecast_payload(user: User) -> dict:
         },
         "top_category": top_category,
     }
-
 
 def _insights_payload(user: User, month_value: date) -> dict:
     start_dt, end_dt = _month_bounds(month_value)
